@@ -41,20 +41,20 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var
   border:1px solid var(--line);border-radius:16px;padding:10px 14px 8px;
   display:grid;grid-template-columns:1.25fr 1fr;grid-template-areas:"spd alt" "spd rest" "sub sub" "info info";column-gap:14px}
 .stat{display:flex;flex-direction:column;min-width:0}
-.lbl{font-size:19px;font-weight:600;color:var(--muted);line-height:1.2}
+.lbl{font-size:22px;font-weight:600;color:var(--muted);line-height:1.2}
 .val{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;line-height:.95;letter-spacing:-.01em}
 .unit{font-family:var(--num);font-weight:600;font-size:.45em;color:var(--muted);margin-left:3px;letter-spacing:0}
 #s-spd{grid-area:spd;justify-content:center;border-right:1px solid var(--line);padding-right:10px}
-#s-spd .val{font-size:88px}
+#s-spd .val{font-size:104px}
 #s-alt{grid-area:alt;padding-bottom:6px}
 #s-rest{grid-area:rest}
-#s-alt .val,#s-rest .val{font-size:50px}
-.tag{font-size:17px;color:var(--muted);margin-top:2px}
-.sub{grid-area:sub;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);font-size:18px;color:var(--muted)}
+#s-alt .val,#s-rest .val{font-size:58px}
+.tag{font-size:19px;color:var(--muted);margin-top:2px}
+.sub{grid-area:sub;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);font-size:21px;color:var(--muted)}
 .sub span{display:flex;flex-direction:column;line-height:1.15}
 .sub i,.sub em{font-style:normal;white-space:nowrap}
 .sub span:nth-child(2){text-align:center}.sub span:nth-child(3){text-align:right}
-.sub b{font-family:var(--num);font-size:30px;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.sub b{font-family:var(--num);font-size:38px;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
 .info{grid-area:info;display:flex;flex-direction:column;gap:3px;margin-top:7px;padding-top:6px;border-top:1px solid var(--line);font-size:21px;line-height:1.25}
 .info span:empty{display:none}
 .info .late{color:var(--warn);font-weight:600}
@@ -99,12 +99,12 @@ body.big .sheet button,body.big .sheet .filebtn{min-height:64px;font-size:21px}
     bottom:auto;max-height:calc(100vh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 12px);width:340px;padding:8px 12px;overflow:hidden;
     grid-template-columns:1fr 1fr;grid-template-areas:"spd spd" "alt rest" "sub sub" "info info";grid-template-rows:auto auto auto 1fr;align-content:start}
   #s-spd{border-right:none;border-bottom:1px solid var(--line);padding:0 0 4px;margin-bottom:6px}
-  #s-spd .val{font-size:76px}
+  #s-spd .val{font-size:92px}
   .tag{display:none}
   #s-alt{padding-bottom:0}
-  #s-alt .val,#s-rest .val{font-size:46px}
-  .sub{margin-top:6px;padding-top:5px;font-size:17px}
-  .sub b{font-size:27px}
+  #s-alt .val,#s-rest .val{font-size:54px}
+  .sub{margin-top:6px;padding-top:5px;font-size:20px}
+  .sub b{font-size:34px}
   .info{font-size:19px;margin-top:5px;padding-top:5px}
   .panel{left:calc(env(safe-area-inset-left,0px) + 354px);right:calc(env(safe-area-inset-right,0px) + 6px);
     bottom:calc(env(safe-area-inset-bottom,0px) + 6px);padding:6px 8px}
@@ -219,8 +219,17 @@ body.trans .hud{--ink:#0B120E;--muted:#1B2620;--line:rgba(0,0,0,.28);--warn:#B32
   text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 6px #fff,0 0 10px rgba(255,255,255,.85)}
 body.trans .hud .lbl,body.trans .hud .sub,body.trans .hud .info{font-weight:600}
 body.trans.sun .hud{background:rgba(255,255,255,.45);text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 4px #fff,0 0 8px #fff,0 0 12px #fff}
+/* Bulle « Reste à monter » affichée 5 s au toucher */
+.climbpop{position:fixed;z-index:1300;transform:translate(-50%,-50%);width:min(320px,86vw);text-align:center;
+  background:var(--panel);border:2px solid var(--ink);border-radius:20px;padding:14px 16px 16px;pointer-events:none;
+  box-shadow:0 4px 18px rgba(0,0,0,.3);opacity:0;transition:opacity .2s}
+.climbpop.on{opacity:1}
+.climbpop .k{font-size:22px;font-weight:600;color:var(--muted)}
+.climbpop .v{font-family:var(--num);font-weight:700;font-size:76px;line-height:1;font-variant-numeric:tabular-nums}
+.climbpop .v small{font-size:.45em;color:var(--muted);margin-left:4px}
+.climbpop .d{font-size:24px;font-weight:600;margin-top:4px}
 /* HUD réduit : seulement vitesse, altitude, reste */
-body.compact .sub,body.compact .info{display:none}
+body.compact .sub{display:none}
 @media (prefers-reduced-motion: reduce){.panel{transition:none}}
 .unlock .fill{position:absolute;inset:0;background:var(--vis);transform:scaleX(0);transform-origin:left}
 .unlock.holding .fill{transform:scaleX(1);transition:transform .9s linear}
@@ -240,14 +249,10 @@ body.compact .sub,body.compact .info{display:none}
     <span><i>D+ restant</i><em><b id="uprest">–</b> m</em></span>
     <span><i>Max</i><em><b id="vmax">0</b> km/h</em></span>
   </div>
-  <div class="info">
-    <span id="i-climb"></span>
-    <span id="i-eta"></span>
-    <span id="i-wpt"></span>
-  </div>
 </section>
 
 <div class="offtrack" id="offtrack" role="status"></div>
+<div class="climbpop" id="climbpop" aria-live="polite"><div class="k" id="cp-k"></div><div class="v" id="cp-v"></div><div class="d" id="cp-d"></div></div>
 <button class="fab" id="show-panel" aria-label="Afficher les boutons"><svg width="34" height="34" viewBox="0 0 34 34" style="margin:auto"><path d="M7 21 L17 11 L27 21" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <section class="panel" id="panel">
@@ -345,8 +350,8 @@ body.compact .sub,body.compact .info{display:none}
       <button data-v="0">Chiffres sur fond</button>
     </div>
     <div class="seg" id="seg-compact">
-      <button data-v="0">Toutes les infos</button>
-      <button data-v="1">Infos réduites</button>
+      <button data-v="0">Avec Fait, D+, Max</button>
+      <button data-v="1">Sans Fait, D+, Max</button>
     </div>
     <div class="seg" id="seg-sun">
       <button data-v="0">Contraste normal</button>
@@ -774,6 +779,29 @@ function modelHours(dist, up, down){
   const a = A(), th = dist / 1000 / a.flat, tv = up / a.up + down / a.down;
   return Math.max(th, tv) + Math.min(th, tv) / 2;
 }
+function climbInfo(along){
+  if (!T || !T.hasEle) return null;
+  const a = along ?? 0;
+  for (const c of T.climbs){
+    const s = T.cum[c.i0], e = T.cum[c.i1];
+    if (a >= s && a < e){ const gain = Math.max(0, T.pts[c.i1].ele - eleAt(a)), d = e - a; return {k:'Reste à monter', gain, d, g:gain / d * 100}; }
+    if (a < s){ const gain = T.pts[c.i1].ele - T.pts[c.i0].ele, d = e - s; return {k:`Montée dans ${km(s - a)}`, gain, d, g:gain / d * 100}; }
+  }
+  return {k:'Plus de montée', gain:0, d:0, g:0};
+}
+let cpT = null;
+function showClimb(){
+  const el = $('climbpop'), ci = climbInfo(lastAlong);
+  if (!ci){ toast(T ? 'Ce GPX ne contient pas d’altitudes' : 'Aucune trace chargée'); return; }
+  $('cp-k').textContent = ci.k;
+  $('cp-v').innerHTML = `${fr(Math.round(ci.gain))}<small>m</small>`;
+  $('cp-d').textContent = ci.d ? `sur ${km(ci.d)}, ${slopeTxt(ci.g)}` : 'jusqu’à l’arrivée';
+  const v = visRect();
+  el.style.left = ((v.l + v.r) / 2) + 'px';
+  el.style.top = ((Math.max(v.t, 0) + Math.min(v.b, innerHeight)) / 2) + 'px';
+  el.classList.add('on');
+  clearTimeout(cpT); cpT = setTimeout(() => el.classList.remove('on'), 5000);
+}
 function climbLine(along){
   if (!T.hasEle) return '';
   if (!T.climbs.length) return 'Pas de montée notable sur la trace';
@@ -792,6 +820,7 @@ function climbLine(along){
   return 'Plus de montée notable jusqu’à l’arrivée';
 }
 function updateNav(along){
+  if (!$('i-eta')) return;               // lignes retirées de l'affichage
   const eta = $('i-eta');
   eta.className = '';
   if (!T){
@@ -1224,11 +1253,8 @@ function setPanel(show){
 }
 $('hide-panel').addEventListener('click', () => setPanel(false));
 $('show-panel').addEventListener('click', () => setPanel(true));
-map.on('click', () => { if (!$('lock').hidden) return; setPanel(document.body.classList.contains('nopanel')); });
-$('hud').addEventListener('click', () => {
-  const on = !document.body.classList.contains('compact');
-  document.body.classList.toggle('compact', on); store.set('tvtt-compact', on ? '1' : '0'); layout();
-});
+map.on('click', () => { if ($('lock').hidden) showClimb(); });
+$('hud').addEventListener('click', showClimb);
 function layout(){
   const hidden = document.body.classList.contains('nopanel');
   document.documentElement.style.setProperty('--panel-h', (hidden ? 90 : $('panel').offsetHeight + 16) + 'px');
@@ -1276,7 +1302,7 @@ $('actpick').addEventListener('click', async e => {
   $('actpick').hidden = true;
   await libReady;
   if (!T) $('welcome').hidden = false;
-  if (store.get('tvtt-tip', '0') !== '1'){ store.set('tvtt-tip', '1'); toast('Touche la carte pour masquer ou afficher les boutons, et les chiffres pour les réduire', 5000); }
+  if (store.get('tvtt-tip', '0') !== '1'){ store.set('tvtt-tip', '1'); toast('Touche l’écran pour voir le reste à monter. La flèche masque les boutons.', 6000); }
   else toast(A().name);
 });
 })();
