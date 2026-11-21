@@ -267,10 +267,10 @@ body.compact .sub{display:none}
 <section class="hud" id="hud">
   <div class="stat" id="s-spd"><span class="lbl">Vitesse</span><span class="val"><span id="spd">0</span><span class="unit">km/h</span></span></div>
   <div class="stat" id="s-alt"><span class="lbl" id="alt-lbl">Altitude</span><span class="val"><span id="alt">–</span><span class="unit">m</span></span><span class="tag" id="alt-tag">en attente du GPS</span></div>
-  <div class="stat" id="s-rest"><span class="lbl">Reste</span><span class="val"><span id="rest">–</span><span class="unit">km</span></span></div>
+  <div class="stat" id="s-rest"><span class="lbl" id="rest-lbl">Reste</span><span class="val"><span id="rest">–</span><span class="unit">km</span></span></div>
   <div class="sub">
-    <span><i>Fait</i><em><b id="done">0</b> km</em></span>
-    <span><i>D+ restant</i><em><b id="uprest">–</b> m</em></span>
+    <span><i id="l-done">Fait</i><em><b id="done">0</b> <span id="u-done">km</span></em></span>
+    <span><i id="l-up">D+ restant</i><em><b id="uprest">–</b> m</em></span>
     <span><i>Max</i><em><b id="vmax">0</b> km/h</em></span>
   </div>
 </section>
@@ -334,6 +334,7 @@ body.compact .sub{display:none}
       <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file2" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
       <button id="rev">Inverser le sens</button>
     </div>
+    <button id="notrack" style="width:100%;margin-bottom:6px">Rouler sans trace</button>
     <div class="lib" id="lib"></div>
 
     <h3>Ma sortie</h3>
@@ -420,7 +421,7 @@ body.compact .sub{display:none}
     <h1>Trace VTT</h1>
     <p>Charge un fichier GPX depuis Fichiers, iCloud Drive ou un mail. La trace s’affiche avec son profil, puis lance le suivi pour voir ta vitesse et ton altitude.</p>
     <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file1" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
-    <button class="link" id="nogpx">Continuer sans trace</button>
+    <button class="link" id="nogpx">Enregistrer sans trace</button>
     <div class="err" id="err"></div>
   </div>
 </div>
@@ -678,6 +679,7 @@ function showTrack(fit){
   $('done').textContent = '0';
   $('uprest').textContent = T.hasEle ? fr(Math.round(T.up)) : '–';
   $('welcome').hidden = true;
+  setFreeMode(false);
   lastAlong = null;
   drawProfile(null); updateNav(null);
 }
@@ -753,7 +755,15 @@ function onFile(e){
 }
 $('file1').addEventListener('change', onFile);
 $('file2').addEventListener('change', onFile);
-$('nogpx').addEventListener('click', () => { $('welcome').hidden = true; updateNav(null); });
+$('nogpx').addEventListener('click', () => { $('welcome').hidden = true; setFreeMode(true); toast('Appuie sur Démarrer pour enregistrer ton parcours', 4000); });
+$('notrack').addEventListener('click', () => {
+  T = null; trackRec = null; trackLine = null; lastAlong = null; lastIdx = null;
+  trackGroup.clearLayers(); wptLayer.clearLayers(); if (rejoinLine) rejoinLine.setLatLngs([]);
+  $('offtrack').classList.remove('on');
+  store.set('tvtt-cur', 'none');
+  setFreeMode(true); drawProfile(null);
+  $('sheet').hidden = true; toast('Sans trace : ton parcours s’enregistre avec Démarrer', 4000);
+});
 $('rev').addEventListener('click', () => {
   if (!trackRec) return;
   const k = 'tvtt-rev-' + trackRec.id;
@@ -770,7 +780,7 @@ function drawProfile(along){
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   ctx.font = '600 17px Barlow, system-ui, sans-serif';
-  if (!T){ ctx.fillStyle = cssv('--muted'); ctx.fillText('Le profil de la trace s’affichera ici.', 4, H/2); return; }
+  if (!T){ ctx.fillStyle = cssv('--muted'); ctx.fillText('Sans trace : ton parcours s’enregistre.', 4, H/2); return; }
   if (!T.hasEle){ ctx.fillStyle = cssv('--muted'); ctx.fillText('Ce GPX ne contient pas d’altitudes.', 4, H/2); return; }
   const padL = 50, padB = 20, padT = 6, w = W - padL - 4, h = H - padB - padT;
   const span = Math.max(T.maxE - T.minE, 50), lo = T.minE - span*.05, hi = T.maxE + span*.08;
@@ -1023,6 +1033,26 @@ function showRejoin(here, n, off){
   return bearing(here, proj);
 }
 
+/* ---------- Mode libre (sans GPX) ---------- */
+function setFreeMode(on){
+  $('rest-lbl').textContent = on ? 'Distance' : 'Reste';
+  $('l-done').textContent = on ? 'Temps' : 'Fait';
+  $('u-done').textContent = on ? '' : 'km';
+  $('l-up').textContent = on ? 'D+' : 'D+ restant';
+  if (on){
+    $('tname').textContent = 'Sans trace';
+    $('tmeta').textContent = 'export GPX : Menu';
+    showFree();
+  }
+}
+function showFree(){
+  const m = Math.round(ride.moving / 60);
+  $('rest').textContent = fr(ride.dist / 1000, ride.dist < 10000 ? 2 : 1);
+  $('done').textContent = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+  $('uprest').textContent = fr(Math.round(ride.up));
+  fitVals();
+}
+
 /* ---------- Enregistrement de la sortie ---------- */
 const newRide = () => ({start:Date.now(), pts:[], dist:0, up:0, moving:0, ref:null});
 let ride; try { ride = JSON.parse(store.get('tvtt-ride', 'null')) || newRide(); } catch(e){ ride = newRide(); }
@@ -1072,7 +1102,7 @@ async function exportRide(){
 $('rec-export').addEventListener('click', exportRide);
 $('rec-reset').addEventListener('click', () => {
   if (ride.pts.length > 1 && !confirm('Effacer la sortie enregistrée et repartir de zéro ? Pense à l’exporter avant.')) return;
-  ride = newRide(); saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0'; renderRide();
+  ride = newRide(); saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0'; renderRide(); if (!T) showFree();
 });
 
 /* ---------- GPS ---------- */
@@ -1080,6 +1110,13 @@ let watchId = null, wakeLock = null, last = null, lastFix = null, spdS = 0, vmax
 
 function start(){
   if (!('geolocation' in navigator)){ toast('GPS indisponible sur cet appareil'); return; }
+  const lp = ride.pts[ride.pts.length - 1];
+  if (lp && Date.now() - lp.t > 3 * 3600000){
+    if (confirm(`Une sortie du ${new Date(ride.start).toLocaleDateString('fr-FR')} est déjà enregistrée (${fr(ride.dist / 1000, 1)} km).\n\nOK : commencer une nouvelle sortie (pense à exporter l’ancienne avant).\nAnnuler : continuer l’ancienne.`)){
+      ride = newRide(); saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0';
+      if (!T) showFree();
+    }
+  }
   watchId = navigator.geolocation.watchPosition(onPos, onPosErr, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
   $('go').textContent = 'Pause'; $('go').classList.add('running');
   requestWake();
@@ -1162,6 +1199,7 @@ function onPos(p){
     });
   }
   updateNav(T ? lastAlong : null);
+  if (!T) showFree();
 
   if (c.altitude != null && !isNaN(c.altitude)){
     $('alt').textContent = String(Math.round(c.altitude));
@@ -1546,7 +1584,8 @@ const libReady = (async () => {
       await idb.put({id:'ancienne', name:store.get('tvtt-name', g.name || 'Trace'), gpx:old, total:tmp.total, up:tmp.up, added:Date.now()});
       store.del('tvtt-gpx'); list = await idb.all();
     }
-    const cur = list.find(r => r.id === store.get('tvtt-cur', '')) || list.sort((a, b) => b.added - a.added)[0];
+    const curId = store.get('tvtt-cur', '');
+    const cur = curId === 'none' ? null : (list.find(r => r.id === curId) || list.sort((a, b) => b.added - a.added)[0]);
     if (cur) openRec(cur);
   } catch(e){
     const old = store.get('tvtt-gpx', null);
@@ -1560,7 +1599,7 @@ $('actpick').addEventListener('click', async e => {
   setAct(b.dataset.v);
   $('actpick').hidden = true;
   await libReady;
-  if (!T) $('welcome').hidden = false;
+  if (!T){ if (store.get('tvtt-cur', '') !== 'none') $('welcome').hidden = false; setFreeMode(true); }
   if (store.get('tvtt-tip', '0') !== '1'){ store.set('tvtt-tip', '1'); toast('Touche l’écran pour voir le reste à monter. La flèche masque les boutons.', 6000); }
   else toast(A().name);
 });
