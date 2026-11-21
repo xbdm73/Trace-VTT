@@ -1034,7 +1034,8 @@ function rideAdd(c, t){
   const lp = ride.pts[ride.pts.length - 1];
   if (lp){
     const d = hav(lp, p), dt = (t - lp.t) / 1000;
-    if (d < 5 && dt < 30) return;
+    const moving = spdS > 0.8;                          // à l'arrêt, le GPS « tremble » de quelques mètres
+    if (moving ? d < 2 : (d < Math.max(5, c.accuracy) && dt < 30)) return;
     ride.dist += d;
     if (dt < 90 && dt > 0 && d / dt > A().moveSpd){ ride.moving += dt; if (sess) sess.moving += dt; }
   }
@@ -1112,10 +1113,11 @@ function onPos(p){
   const c = p.coords, now = p.timestamp, here = {lat:c.latitude, lon:c.longitude};
   lastFix = {lat:here.lat, lon:here.lon, alt:c.altitude, acc:c.accuracy, t:now};
 
-  let v = (c.speed != null && c.speed >= 0) ? c.speed : null;
+  let v = (c.speed != null && c.speed >= 0) ? c.speed : null, doppler = v != null;
   if (v == null && last){ const dt = (now - last.t) / 1000; if (dt > 0.5) v = hav(last, here) / dt; }
   if (v != null){
-    spdS = spdS * 0.4 + v * 0.6;
+    const k = doppler ? 0.85 : 0.5;
+    spdS = spdS * (1 - k) + v * k;
     const kmh = spdS < 0.5 ? 0 : spdS * 3.6;
     $('spd').textContent = kmh < 10 ? fr(kmh, 1) : fr(kmh);
     if (c.accuracy < 25 && kmh > vmax && kmh < 120){ vmax = kmh; $('vmax').textContent = fr(vmax); }
