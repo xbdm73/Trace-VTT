@@ -17,14 +17,17 @@
 :root{
   --paper:#F3F5F2; --panel:rgba(243,245,242,.93); --ink:#14201A; --muted:#55645C;
   --line:rgba(20,32,26,.14); --vis:#F0561D; --vis-ink:#fff; --track:#C2177A;
-  --relief:#3F6B56; --relief-soft:rgba(63,107,86,.22); --warn:#B3261E;
+  --relief:#3F6B56; --relief-soft:rgba(63,107,86,.22); --warn:#B3261E; --soon:#A85A00;
   --num:"Barlow Condensed","Arial Narrow",sans-serif; --txt:"Barlow",system-ui,-apple-system,sans-serif;
-  --panel-h:200px;
+  --panel-h:200px; --hud-b:200px;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --paper:#111813; --panel:rgba(17,24,19,.92); --ink:#ECF2EE; --muted:#9BAAA2;
+  :root{ --paper:#111813; --panel:rgba(17,24,19,.92); --ink:#ECF2EE; --muted:#9BAAA2; --soon:#FFB547; --warn:#FF6B5E;
     --line:rgba(236,242,238,.16); --relief:#7FB89B; --relief-soft:rgba(127,184,155,.2); --track:#FF4FA8; color-scheme:dark; }
 }
+/* Plein soleil : contraste maximal, toujours clair */
+body.sun{--paper:#fff; --panel:#fff; --ink:#000; --muted:#1E2A24; --line:rgba(0,0,0,.45); --warn:#B3261E; --soon:#8A4A00;
+  --relief:#1E4D38; --relief-soft:rgba(30,77,56,.3); --track:#C2177A; color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--txt);-webkit-tap-highlight-color:transparent}
 #map{position:fixed;inset:0;z-index:1;background:var(--paper)}
@@ -36,7 +39,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var
 .hud{position:fixed;z-index:1000;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 8px);
   background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border:1px solid var(--line);border-radius:16px;padding:10px 14px 8px;
-  display:grid;grid-template-columns:1.25fr 1fr;grid-template-areas:"spd alt" "spd rest" "sub sub";column-gap:14px}
+  display:grid;grid-template-columns:1.25fr 1fr;grid-template-areas:"spd alt" "spd rest" "sub sub" "info info";column-gap:14px}
 .stat{display:flex;flex-direction:column;min-width:0}
 .lbl{font-size:12px;color:var(--muted);line-height:1.2}
 .val{font-family:var(--num);font-weight:700;font-variant-numeric:tabular-nums;line-height:.95;letter-spacing:-.01em}
@@ -49,51 +52,66 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var
 .tag{font-size:11px;color:var(--muted);margin-top:1px}
 .sub{grid-area:sub;display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding-top:7px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .sub b{font-family:var(--num);font-size:17px;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.info{grid-area:info;display:flex;flex-direction:column;gap:3px;margin-top:7px;padding-top:6px;border-top:1px solid var(--line);font-size:13px;line-height:1.3}
+.info span:empty{display:none}
+.info .late{color:var(--warn);font-weight:600}
+.info .soon{color:var(--soon);font-weight:600}
+body.sun .lbl,body.sun .tag,body.sun .sub,body.sun .info{font-weight:600}
+body.sun .hud,body.sun .panel{border:2px solid #000;backdrop-filter:none;-webkit-backdrop-filter:none}
 
-.offtrack{position:fixed;z-index:1001;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 172px);
+.offtrack{position:fixed;z-index:1001;left:50%;transform:translateX(-50%);top:var(--hud-b);
   background:var(--warn);color:#fff;font-weight:600;padding:8px 16px;border-radius:999px;font-size:15px;display:none;white-space:nowrap}
 .offtrack.on{display:block}
 
 /* Panneau bas */
 .panel{position:fixed;z-index:1000;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
   background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  border:1px solid var(--line);border-radius:16px;padding:10px 10px 10px}
+  border:1px solid var(--line);border-radius:16px;padding:10px}
 .ptitle{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:0 4px 4px;font-size:13px}
 .ptitle .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle .meta{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 #profile{width:100%;height:96px;display:block}
-.btns{display:grid;grid-template-columns:1fr 1.35fr 1fr 1fr 1fr;gap:6px;margin-top:8px}
-.btns button,.btns .filebtn{font-size:14px;padding:0 4px}
+.btns{display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr 1fr;gap:6px;margin-top:8px}
+.btns button{font-size:14px;padding:0 4px}
 button[aria-pressed=true].tog{border-color:var(--ink)}
 body.noprof .ptitle,body.noprof #profile{display:none}
 body.noprof .btns{margin-top:0}
 
-/* Paysage (iPhone sur le guidon) : chiffres à gauche, carte à droite */
+button,.filebtn{font:600 15px var(--txt);color:var(--ink);background:transparent;border:1px solid var(--line);
+  border-radius:12px;min-height:46px;padding:0 8px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none}
+button:disabled{opacity:.4}
+button:focus-visible,.filebtn:focus-within,a.filebtn:focus-visible{outline:3px solid var(--vis);outline-offset:2px}
+button.primary,.filebtn.primary{background:var(--vis);color:var(--vis-ink);border-color:var(--vis)}
+button.primary.running{background:transparent;color:var(--vis);border:2px solid var(--vis)}
+button.hot{border-color:var(--vis);color:var(--vis)}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* Grands boutons (gants) */
+body.big .btns button{min-height:64px;font-size:16px}
+body.big .sheet button,body.big .sheet .filebtn{min-height:56px;font-size:16px}
+
+/* Paysage (téléphone sur le guidon) */
 @media (orientation: landscape) and (max-height: 540px){
   .hud{top:calc(env(safe-area-inset-top,0px) + 6px);left:calc(env(safe-area-inset-left,0px) + 6px);right:auto;
-    bottom:calc(env(safe-area-inset-bottom,0px) + 6px);width:230px;padding:8px 12px;
-    grid-template-columns:1fr 1fr;grid-template-areas:"spd spd" "alt rest" "sub sub";grid-template-rows:auto auto 1fr;align-content:start}
+    bottom:calc(env(safe-area-inset-bottom,0px) + 6px);width:236px;padding:8px 12px;overflow:hidden;
+    grid-template-columns:1fr 1fr;grid-template-areas:"spd spd" "alt rest" "sub sub" "info info";grid-template-rows:auto auto auto 1fr;align-content:start}
   #s-spd{border-right:none;border-bottom:1px solid var(--line);padding:0 0 4px;margin-bottom:6px}
-  #s-spd .val{font-size:72px}
+  #s-spd .val{font-size:70px}
   #s-alt{padding-bottom:0}
   #s-alt .val,#s-rest .val{font-size:34px}
-  .sub{flex-direction:column;justify-content:flex-start;gap:3px;margin-top:8px;padding-top:6px;font-size:13px}
-  .sub span{display:flex;justify-content:space-between;align-items:baseline}
-  .panel{left:calc(env(safe-area-inset-left,0px) + 244px);right:calc(env(safe-area-inset-right,0px) + 6px);
+  .sub{flex-direction:column;justify-content:flex-start;gap:2px;margin-top:6px;padding-top:5px}
+  .sub span{display:flex;align-items:baseline;gap:5px}
+  .sub b{margin-left:auto}
+  .info{font-size:12px;margin-top:5px;padding-top:5px}
+  .panel{left:calc(env(safe-area-inset-left,0px) + 250px);right:calc(env(safe-area-inset-right,0px) + 6px);
     bottom:calc(env(safe-area-inset-bottom,0px) + 6px);padding:6px 8px}
   #profile{height:62px}
   .ptitle{padding-bottom:2px;font-size:12px}
   .btns{margin-top:6px}
-  .btns button,.btns .filebtn{min-height:40px}
-  .offtrack{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(50% + 122px)}
+  .btns button{min-height:42px}
+  body.big .btns button{min-height:58px}
+  .offtrack{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(50% + 125px)}
 }
-button,.filebtn{font:600 15px var(--txt);color:var(--ink);background:transparent;border:1px solid var(--line);
-  border-radius:12px;min-height:46px;padding:0 8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-button:focus-visible,.filebtn:focus-within{outline:3px solid var(--vis);outline-offset:2px}
-button.primary{background:var(--vis);color:var(--vis-ink);border-color:var(--vis)}
-button.primary.running{background:transparent;color:var(--vis);border:2px solid var(--vis)}
-button.hot{border-color:var(--vis);color:var(--vis)}
-input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 
 /* Accueil */
 .welcome{position:fixed;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.25)}
@@ -101,15 +119,26 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
 .card{background:var(--paper);color:var(--ink);border-radius:20px;padding:26px 22px 20px;max-width:360px;width:100%;border:1px solid var(--line)}
 .card h1{font-family:var(--num);font-weight:700;font-size:40px;line-height:1;margin:0 0 10px}
 .card p{margin:0 0 18px;line-height:1.45;color:var(--muted)}
-.card .filebtn{background:var(--vis);color:var(--vis-ink);border-color:var(--vis);min-height:52px;font-size:17px}
+.card .filebtn{min-height:52px;font-size:17px}
 .card .link{margin-top:10px;width:100%;border:none;color:var(--muted);font-weight:400;text-decoration:underline;min-height:40px}
 .err{color:var(--warn);font-size:14px;margin-top:10px;min-height:1em}
+#actpick{z-index:1600;background:var(--paper)}
+.acts{display:grid;gap:10px}
+.actbtn{flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:72px;padding:10px 16px;text-align:left;border-width:2px}
+.actbtn b{font-family:var(--num);font-size:28px;line-height:1}
+.actbtn small{font-weight:400;font-size:13px;color:var(--muted)}
+.actbtn[aria-pressed=true]{border-color:var(--vis)}
+@media (orientation: landscape) and (max-height: 540px){
+  #actpick .card{max-width:640px}
+  .acts{grid-template-columns:1fr 1fr 1fr}
+  .actbtn{min-height:96px}
+}
 
-.toast{position:fixed;z-index:1600;left:50%;bottom:calc(var(--panel-h) + 18px);transform:translateX(-50%);
-  background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;z-index:2000;left:50%;bottom:calc(var(--panel-h) + 18px);transform:translateX(-50%);max-width:90vw;text-align:center;
+  background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none}
 .toast.on{opacity:1}
 
-/* Marqueur position */
+/* Marqueurs */
 .me{background:none;border:none}
 .me-dot{width:28px;height:28px;position:relative}
 .me-dot::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#16181D;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -117,40 +146,68 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
 .me-arrow::before{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
   border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #16181D}
 .wpt{background:none;border:none}
-.wpt div{width:12px;height:12px;border-radius:2px;background:#fff;border:3px solid var(--track);transform:rotate(45deg)}
+.wpt div{width:12px;height:12px;border-radius:2px;background:#fff;border:3px solid #16181D;transform:rotate(45deg)}
+.dir{background:none;border:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:2px 0 4px}
 .legend i{display:inline-block;width:18px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle}
-/* Panneau Cartes */
+
+/* Menu */
 .sheet{position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.3);display:flex;align-items:flex-end}
 .sheet[hidden]{display:none}
-.sheet-card{background:var(--paper);width:100%;max-height:88vh;overflow:auto;border-radius:20px 20px 0 0;
-  padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);border-top:1px solid var(--line)}
-.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sheet-card{background:var(--paper);width:100%;max-height:90vh;overflow:auto;border-radius:20px 20px 0 0;-webkit-overflow-scrolling:touch;
+  padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 16px);border-top:1px solid var(--line)}
+@media (orientation: landscape) and (max-height: 540px){
+  .sheet{justify-content:center}
+  .sheet-card{max-width:560px;max-height:96vh;padding-left:calc(env(safe-area-inset-left,0px) + 16px)}
+}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-12px;background:var(--paper);padding:4px 0 6px;z-index:2}
 .sheet-head h2{font-family:var(--num);font-size:30px;margin:0}
 .sheet-head button{min-height:40px;border:none;color:var(--vis)}
-.sheet h3{font-size:15px;margin:16px 0 8px}
+.sheet h3{font-size:15px;margin:18px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+.sheet h3:first-of-type{border-top:none;padding-top:0;margin-top:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.row.three{grid-template-columns:1fr 1fr 1fr}
 .opts{display:grid;gap:6px}
-.opt{display:flex;justify-content:space-between;align-items:center;text-align:left;width:100%;padding:8px 12px;min-height:48px}
-.opt small{color:var(--muted);font-weight:400;font-size:12px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;padding:8px 12px;min-height:48px}
+.opt small{color:var(--muted);font-weight:400;font-size:12px;white-space:nowrap}
 .opt[aria-pressed=true]{border:2px solid var(--vis)}
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.seg.three{grid-template-columns:1fr 1fr 1fr}
 .seg button{min-height:42px;font-size:14px}
 .seg button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .hint{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.4}
 .est{font-size:14px;margin:6px 0 10px;font-variant-numeric:tabular-nums}
-#dl-go{width:100%;min-height:50px}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:10px;display:none}
 .bar.on{display:block}
 .bar div{height:100%;width:0;background:var(--vis)}
-.stored{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
-.stored button{min-height:40px;font-size:13px;color:var(--warn)}
+.stored{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:14px}
+.stored button,.danger{color:var(--warn)}
+.lib{display:grid;gap:6px;margin-top:6px}
+.lib-row{display:grid;grid-template-columns:1fr 48px;gap:6px}
+.lib-row .opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sos{border:2px solid var(--warn);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.sos .big{font-family:var(--num);font-weight:700;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums;user-select:text;-webkit-user-select:text}
+.sos .small{font-size:13px;color:var(--muted);margin-top:4px}
+a.call{background:var(--warn);color:#fff;border-color:var(--warn)}
+.recinfo{font-size:14px;line-height:1.45;margin:0 0 8px}
+
+/* Verrouillage */
+.lock{position:fixed;inset:0;z-index:1900;touch-action:none;display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}
+.lock[hidden]{display:none}
+.unlock{position:relative;overflow:hidden;background:var(--ink);color:var(--paper);border:none;border-radius:999px;padding:0 24px;min-height:58px;font-size:16px;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.big .unlock{min-height:74px;font-size:18px}
+.unlock .fill{position:absolute;inset:0;background:var(--vis);transform:scaleX(0);transform-origin:left}
+.unlock.holding .fill{transform:scaleX(1);transition:transform .9s linear}
+.unlock .t{position:relative}
 @media (prefers-reduced-motion: reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
 <div id="map"></div>
 
-<section class="hud" aria-live="off">
+<section class="hud" id="hud">
   <div class="stat" id="s-spd"><span class="lbl">Vitesse</span><span class="val"><span id="spd">0</span><span class="unit">km/h</span></span></div>
   <div class="stat" id="s-alt"><span class="lbl" id="alt-lbl">Altitude</span><span class="val"><span id="alt">–</span><span class="unit">m</span></span><span class="tag" id="alt-tag">en attente du GPS</span></div>
   <div class="stat" id="s-rest"><span class="lbl">Reste</span><span class="val"><span id="rest">–</span><span class="unit">km</span></span></div>
@@ -158,6 +215,11 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
     <span>Fait <b id="done">0</b> km</span>
     <span>D+ restant <b id="uprest">–</b> m</span>
     <span>Max <b id="vmax">0</b> km/h</span>
+  </div>
+  <div class="info">
+    <span id="i-climb"></span>
+    <span id="i-eta"></span>
+    <span id="i-wpt"></span>
   </div>
 </section>
 
@@ -167,51 +229,125 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
   <div class="ptitle"><span class="name" id="tname">Aucune trace</span><span class="meta" id="tmeta"></span></div>
   <canvas id="profile" aria-label="Profil altimétrique de la trace"></canvas>
   <div class="btns">
-    <label class="filebtn">GPX<input type="file" id="file2" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
     <button class="primary" id="go">Démarrer</button>
     <button id="center">Centrer</button>
     <button id="prof" class="tog">Profil</button>
-    <button id="maps">Cartes</button>
+    <button id="lockb">Verrou</button>
+    <button id="menu">Menu</button>
   </div>
 </section>
 
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-card" role="dialog" aria-labelledby="sheet-t">
-    <div class="sheet-head"><h2 id="sheet-t">Cartes</h2><button id="sheet-close">Fermer</button></div>
+    <div class="sheet-head"><h2 id="sheet-t">Menu</h2><button id="sheet-close">Fermer</button></div>
+
+    <h3>Secours</h3>
+    <div class="sos">
+      <div class="big" id="sos-dd">Position inconnue</div>
+      <div class="small" id="sos-dms"></div>
+      <div class="small" id="sos-meta"></div>
+    </div>
+    <div class="row">
+      <a class="filebtn call" href="tel:112">Appeler le 112</a>
+      <a class="filebtn call" href="tel:1414">Rega 1414 (CH)</a>
+    </div>
+    <div class="row">
+      <button id="sos-sms">SMS avec ma position</button>
+      <button id="sos-share">Partager ma position</button>
+    </div>
+
+    <h3>Activité</h3>
+    <div class="seg three" id="seg-act">
+      <button data-v="vtt">VTT</button>
+      <button data-v="rando">Randonnée</button>
+      <button data-v="ski">Ski de rando</button>
+    </div>
+    <p class="hint" id="act-hint"></p>
+
+    <h3>Mes traces</h3>
+    <div class="row">
+      <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file2" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
+      <button id="rev">Inverser le sens</button>
+    </div>
+    <div class="lib" id="lib"></div>
+
+    <h3>Ma sortie</h3>
+    <p class="recinfo" id="rec-info"></p>
+    <div class="row">
+      <button id="rec-export">Exporter en GPX</button>
+      <button id="rec-reset" class="danger">Nouvelle sortie</button>
+    </div>
+
     <h3>Fond de carte</h3>
     <div class="opts" id="layer-list"></div>
+    <div id="ov-sec">
+    <h3>Pentes du terrain</h3>
+    <div class="seg" id="seg-ov">
+      <button data-v="off">Masquer</button>
+      <button data-v="on">Afficher</button>
+    </div>
+    <p class="hint">Inclinaison du terrain à partir de 30°, du jaune au violet (IGN en France, swisstopo en Suisse). À utiliser pour le risque d’avalanche, avec le bulletin du jour.</p>
+    </div>
+
     <h3>Couleur de la trace</h3>
     <div class="seg" id="seg-color">
-      <button data-v="slope" aria-pressed="true">Selon la pente</button>
-      <button data-v="plain" aria-pressed="false">Unie</button>
+      <button data-v="slope">Selon la pente</button>
+      <button data-v="plain">Unie</button>
     </div>
     <div class="legend" id="legend"></div>
+
     <h3>Télécharger pour le hors ligne</h3>
     <p class="hint" id="dl-hint"></p>
     <div class="seg" id="seg-zone">
-      <button data-v="trace" aria-pressed="true">Autour de la trace</button>
-      <button data-v="view" aria-pressed="false">Zone affichée</button>
+      <button data-v="trace">Autour de la trace</button>
+      <button data-v="view">Zone affichée</button>
     </div>
     <div class="seg" id="seg-detail">
-      <button data-v="std" aria-pressed="true">Standard</button>
-      <button data-v="max" aria-pressed="false">Détaillé</button>
+      <button data-v="std">Standard</button>
+      <button data-v="max">Détaillé</button>
     </div>
     <p class="est" id="dl-est"></p>
-    <button class="primary" id="dl-go">Télécharger</button>
+    <button class="primary" id="dl-go" style="width:100%;min-height:50px">Télécharger</button>
     <div class="bar" id="dl-bar"><div></div></div>
     <p class="hint" id="dl-status" style="margin-top:8px"></p>
     <div class="stored"><span id="st-info">Aucune carte enregistrée</span><button id="dl-clear">Tout supprimer</button></div>
+
+    <h3>Affichage</h3>
+    <div class="seg" id="seg-big">
+      <button data-v="0">Boutons normaux</button>
+      <button data-v="1">Grands boutons</button>
+    </div>
+    <div class="seg" id="seg-sun">
+      <button data-v="0">Contraste normal</button>
+      <button data-v="1">Plein soleil</button>
+    </div>
   </div>
 </div>
 
-<div class="welcome" id="welcome">
+<div class="welcome" id="actpick">
+  <div class="card">
+    <h1>Trace VTT</h1>
+    <p>Quelle activité aujourd’hui ?</p>
+    <div class="acts">
+      <button class="actbtn" data-v="vtt"><b>VTT</b><small>Pente de la trace en %, vitesse</small></button>
+      <button class="actbtn" data-v="rando"><b>Randonnée</b><small>Pente en %, temps de marche</small></button>
+      <button class="actbtn" data-v="ski"><b>Ski de rando</b><small>Pente en degrés, pentes du terrain</small></button>
+    </div>
+  </div>
+</div>
+
+<div class="welcome" id="welcome" hidden>
   <div class="card">
     <h1>Trace VTT</h1>
     <p>Charge un fichier GPX depuis Fichiers, iCloud Drive ou un mail. La trace s’affiche avec son profil, puis lance le suivi pour voir ta vitesse et ton altitude.</p>
-    <label class="filebtn">Ouvrir un GPX<input type="file" id="file1" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
-    <button class="link" id="nogpx">Rouler sans trace</button>
+    <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file1" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
+    <button class="link" id="nogpx">Continuer sans trace</button>
     <div class="err" id="err"></div>
   </div>
+</div>
+
+<div class="lock" id="lock" hidden>
+  <button class="unlock" id="unlock"><span class="fill"></span><span class="t">Écran verrouillé, maintiens pour ouvrir</span></button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -219,16 +355,47 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
 <script>
 (() => {
 const $ = id => document.getElementById(id);
-const R = 6371008.8, rad = d => d * Math.PI / 180;
+const R = 6371008.8, rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
 const fr = (v, d = 0) => v.toLocaleString('fr-FR', {minimumFractionDigits: d, maximumFractionDigits: d});
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : v; } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} }
+};
+const cssv = n => getComputedStyle(document.body).getPropertyValue(n).trim();
 function hav(a, b){
   const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
   const h = Math.sin(dLat/2)**2 + Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
+const km = d => d < 1000 ? `${fr(Math.round(d / 10) * 10)} m` : `${fr(d / 1000, 1)} km`;
+const hm = d => `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+function dur(h){ let H = Math.floor(h), M = Math.round((h - H) * 60); if (M === 60){ H++; M = 0; } return H ? `${H} h ${String(M).padStart(2, '0')}` : `${M} min`; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- Activités ---------- */
+// Temps de parcours façon DIN 33466 : max(plat, vertical) + min/2
+const ACTS = {
+  vtt:   {name:'VTT',          flat:15, up:500, down:2000, minGain:40, moveSpd:1.2, unit:'%', slopes:[5, 8, 12],
+          hint:'Pente de la trace en %. Durée estimée sur 15 km/h à plat et 500 m de D+ par heure, puis ajustée à ton rythme réel.'},
+  rando: {name:'Randonnée',    flat:4,  up:300, down:500,  minGain:50, moveSpd:0.4, unit:'%', slopes:[10, 20, 30],
+          hint:'Pente de la trace en %. Durée estimée sur 4 km/h à plat, 300 m de montée et 500 m de descente par heure, puis ajustée à ton rythme réel.'},
+  ski:   {name:'Ski de rando', flat:4,  up:350, down:1500, minGain:50, moveSpd:0.4, unit:'°', slopes:[15, 22, 30],
+          hint:'Pente de la trace en degrés. Durée estimée sur 350 m de montée par heure, puis ajustée à ton rythme réel. La pente de la trace ne remplace pas celle du terrain.'}
+};
+const COLORS = ['#2E9E4F', '#1F6FD1', '#F08A00', '#D7261E'];
+let act = store.get('tvtt-act', 'vtt'); if (!ACTS[act]) act = 'vtt';
+const A = () => ACTS[act];
+const slopeVal = g => A().unit === '°' ? deg(Math.atan(Math.abs(g) / 100)) : Math.abs(g);
+const slopeClass = g => { const v = slopeVal(g), t = A().slopes; return v < t[0] ? 0 : v < t[1] ? 1 : v < t[2] ? 2 : 3; };
+const slopeTxt = g => A().unit === '°' ? `${fr(slopeVal(g))}°` : `${fr(Math.abs(g))} %`;
+function legendLabels(){
+  const t = A().slopes, u = A().unit === '°' ? '°' : ' %';
+  return [`moins de ${t[0]}${u}`, `${t[0]} à ${t[1]}${u}`, `${t[1]} à ${t[2]}${u}`, `${t[2]}${u} et plus`];
+}
 
 /* ---------- Carte ---------- */
-// dlStd / dlMax : zoom maxi téléchargé en Standard / Détaillé (0 = pas de téléchargement)
 const layers = [
   {name:'OpenTopoMap', zone:'Monde, relief', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', sub:'abc', maxZoom:17, dlStd:14, dlMax:15, kb:30, attr:'© OpenStreetMap, SRTM, OpenTopoMap'},
   {name:'Plan IGN', zone:'France', url:'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png', maxZoom:19, dlStd:15, dlMax:16, kb:25, attr:'© IGN Géoplateforme'},
@@ -236,12 +403,23 @@ const layers = [
   {name:'OpenStreetMap', zone:'Monde, en ligne seulement', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png', maxZoom:19, dlStd:0, dlMax:0, kb:20, attr:'© OpenStreetMap'}
 ];
 layers.forEach(d => d.l = L.tileLayer(d.url, {maxZoom:d.maxZoom, subdomains:d.sub || 'abc', attribution:d.attr}));
-let layerIdx = 0;
-try { layerIdx = +(localStorage.getItem('tvtt-layer') || 0) % layers.length; } catch(e){}
+const overlays = [
+  {url:'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.SLOPES.MOUNTAIN&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png', maxNative:17, kb:8, attr:'Pentes © IGN'},
+  {url:'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hangneigung-ueber_30/default/current/3857/{z}/{x}/{y}.png', maxNative:17, kb:8, attr:'Pentes © swisstopo'}
+];
+overlays.forEach(o => o.l = L.tileLayer(o.url, {maxZoom:19, maxNativeZoom:o.maxNative, opacity:.55, attribution:o.attr}));
+
+let layerIdx = +store.get('tvtt-layer', 0) % layers.length;
+let ovOn = act === 'ski' && store.get('tvtt-ov-ski', 'on') === 'on';
 const map = L.map('map', {zoomControl:false, attributionControl:true}).setView([45.67, 6.39], 11);
+layers[layerIdx].l.addTo(map);
+const lay = () => layers[layerIdx];
+function applyOverlay(){ overlays.forEach(o => ovOn ? o.l.addTo(map) : map.removeLayer(o.l)); }
+applyOverlay();
+
 const isLand = () => matchMedia('(orientation: landscape) and (max-height: 540px)').matches;
 function visRect(){
-  const W = innerWidth, H = innerHeight, hud = document.querySelector('.hud').getBoundingClientRect(), pan = $('panel').getBoundingClientRect();
+  const W = innerWidth, H = innerHeight, hud = $('hud').getBoundingClientRect(), pan = $('panel').getBoundingClientRect();
   return isLand() ? {l:hud.right + 8, t:0, r:W, b:pan.top - 4} : {l:0, t:hud.bottom + 8, r:W, b:pan.top - 4};
 }
 function fitPad(){ const v = visRect(); return {paddingTopLeft:[v.l + 16, v.t + 16], paddingBottomRight:[innerWidth - v.r + 16, innerHeight - v.b + 16]}; }
@@ -251,45 +429,11 @@ function showAt(ll, zoom){
   const c = map.unproject(map.project(ll, z).subtract(off), z);
   if (zoom != null && zoom !== map.getZoom()) map.setView(c, z); else map.panTo(c, {animate:true, duration:.5});
 }
-layers[layerIdx].l.addTo(map);
-
-let trackLine = null, trackGroup = L.layerGroup().addTo(map), wptLayer = L.layerGroup().addTo(map);
-// Classes de pente (valeur absolue, montée comme descente)
-const SLOPES = [
-  {max:5,  color:'#2E9E4F', label:'moins de 5 %'},
-  {max:8,  color:'#1F6FD1', label:'5 à 8 %'},
-  {max:12, color:'#F08A00', label:'8 à 12 %'},
-  {max:Infinity, color:'#D7261E', label:'12 % et plus'}
-];
-const slopeClass = g => SLOPES.findIndex(c => Math.abs(g) < c.max);
-let colorMode = 'slope';
-try { colorMode = localStorage.getItem('tvtt-color') || 'slope'; } catch(e){}
-function drawTrack(){
-  trackGroup.clearLayers();
-  if (!T) return;
-  const ll = T.pts.map(p => [p.lat, p.lon]);
-  L.polyline(ll, {color:'#fff', weight:9, opacity:.85, interactive:false}).addTo(trackGroup);
-  if (colorMode !== 'slope' || !T.hasEle){
-    L.polyline(ll, {color:getComputedStyle(document.documentElement).getPropertyValue('--track').trim(), weight:5, opacity:.95, interactive:false}).addTo(trackGroup);
-    return;
-  }
-  let start = 0, cls = slopeClass(T.grade[0]);
-  for (let i = 1; i < T.pts.length; i++){
-    const c = i < T.pts.length - 1 ? slopeClass(T.grade[i]) : -1;
-    if (c !== cls){
-      L.polyline(ll.slice(start, i + 1), {color:SLOPES[cls].color, weight:5, opacity:1, lineCap:'butt', interactive:false}).addTo(trackGroup);
-      start = i; cls = c;
-    }
-  }
-}
-function renderLegend(){
-  $('legend').innerHTML = colorMode === 'slope' ? SLOPES.map(c => `<span><i style="background:${c.color}"></i>${c.label}</span>`).join('') : '';
-  $('seg-color').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === colorMode));
-}
-let meMarker = null, accCircle = null, follow = true;
 
 /* ---------- Trace ---------- */
-let T = null, lastIdx = null;
+let T = null, trackRec = null, lastIdx = null, trackLine = null;
+const trackGroup = L.layerGroup().addTo(map), wptLayer = L.layerGroup().addTo(map);
+let colorMode = store.get('tvtt-color', 'slope');
 
 function parseGPX(text){
   const doc = new DOMParser().parseFromString(text, 'application/xml');
@@ -303,110 +447,239 @@ function parseGPX(text){
   if (pts.length < 2) throw new Error('Aucune trace trouvée dans ce fichier.');
   const wpts = [...doc.getElementsByTagName('wpt')].map(w => ({
     lat:+w.getAttribute('lat'), lon:+w.getAttribute('lon'),
-    name:(w.getElementsByTagName('name')[0]||{}).textContent || ''
+    name:((w.getElementsByTagName('name')[0] || {}).textContent || '').trim()
   })).filter(p => isFinite(p.lat) && isFinite(p.lon));
   const nameEl = doc.querySelector('trk > name') || doc.querySelector('rte > name') || doc.querySelector('metadata > name');
+  return {pts, wpts, name:(nameEl && nameEl.textContent.trim()) || ''};
+}
 
-  // altitudes manquantes : on reprend la précédente
+function buildTrack(pts, wpts, name){
   const hasEle = pts.some(p => isFinite(p.ele));
   let prev = pts.find(p => isFinite(p.ele))?.ele ?? 0;
-  pts.forEach(p => { if (isFinite(p.ele)) prev = p.ele; else p.ele = prev; });
-
-  const cum = [0], cumUp = [0];
+  pts = pts.map(p => { if (isFinite(p.ele)) prev = p.ele; return {lat:p.lat, lon:p.lon, ele:prev}; });
+  const n = pts.length, cum = [0], cumUp = [0], cumDown = [0];
   let ref = pts[0].ele, up = 0, down = 0;
-  for (let i = 1; i < pts.length; i++){
+  for (let i = 1; i < n; i++){
     cum.push(cum[i-1] + hav(pts[i-1], pts[i]));
-    const d = pts[i].ele - ref;             // hystérésis 3 m contre le bruit
+    const d = pts[i].ele - ref;              // hystérésis 3 m contre le bruit
     if (d > 3){ up += d; ref = pts[i].ele; } else if (d < -3){ down -= d; ref = pts[i].ele; }
-    cumUp.push(up);
+    cumUp.push(up); cumDown.push(down);
   }
-  const eles = pts.map(p => p.ele);
-  const grade = new Array(pts.length).fill(0);
+  // Pente lissée sur 100 m glissants
+  const grade = new Array(n).fill(0);
   if (hasEle){
     let a = 0, b = 0;
-    for (let i = 0; i < pts.length; i++){
+    for (let i = 0; i < n; i++){
       while (a < i && cum[i] - cum[a] > 50) a++;
-      while (b < pts.length - 1 && cum[b] - cum[i] < 50) b++;
+      while (b < n - 1 && cum[b] - cum[i] < 50) b++;
       const dd = cum[b] - cum[a];
       grade[i] = dd > 15 ? (pts[b].ele - pts[a].ele) / dd * 100 : 0;
     }
   }
-  return {pts, wpts, cum, cumUp, grade, total:cum[cum.length-1], up, down, hasEle,
-    minE:Math.min(...eles), maxE:Math.max(...eles), name:(nameEl && nameEl.textContent.trim()) || ''};
+  const eles = pts.map(p => p.ele);
+  const t = {pts, wpts, name, cum, cumUp, cumDown, grade, total:cum[n-1], up, down, hasEle,
+    minE:Math.min(...eles), maxE:Math.max(...eles)};
+  // Position des points GPX le long de la trace
+  t.wptA = wpts.map(w => { const p = project(t, w.lat, w.lon, 0, n - 1); return {...w, along:p.along, d:p.d}; })
+    .filter(w => w.d < 200).sort((a, b) => a.along - b.along);
+  t.climbs = findClimbs(t);
+  return t;
 }
 
-function loadTrack(text, fileName, fit = true){
-  T = parseGPX(text);
-  if (!T.name) T.name = (fileName || 'Trace').replace(/\.gpx$/i, '');
-  lastIdx = null;
-  const css = getComputedStyle(document.documentElement);
+// Montées notables : gain mini selon l'activité, petites descentes tolérées (20 m)
+function findClimbs(t){
+  const out = [], P = t.pts, tol = 20, minGain = A().minGain;
+  if (!t.hasEle) return out;
+  let s = 0, m = 0;
+  for (let i = 1; i < P.length; i++){
+    const e = P[i].ele;
+    if (e > P[m].ele) m = i;
+    if (P[m].ele - e > tol){
+      if (P[m].ele - P[s].ele >= minGain) out.push({i0:s, i1:m});
+      s = i; m = i;
+    } else if (m === s && e < P[s].ele){ s = i; m = i; }
+  }
+  if (P[m].ele - P[s].ele >= minGain) out.push({i0:s, i1:m});
+  return out;
+}
+
+function project(t, lat, lon, a, b){
+  const ky = R * Math.PI / 180, kx = ky * Math.cos(rad(lat));
+  let best = {d:Infinity, i:0, t:0};
+  for (let i = a; i < b; i++){
+    const p = t.pts[i], q = t.pts[i+1];
+    const ax = (p.lon-lon)*kx, ay = (p.lat-lat)*ky, dx = (q.lon-p.lon)*kx, dy = (q.lat-p.lat)*ky;
+    const L2 = dx*dx + dy*dy;
+    let u = L2 ? -(ax*dx + ay*dy) / L2 : 0; u = clamp(u, 0, 1);
+    const d = Math.hypot(ax + u*dx, ay + u*dy);
+    if (d < best.d) best = {d, i, t:u};
+  }
+  const j = Math.min(best.i + 1, t.pts.length - 1);
+  best.along = t.cum[best.i] + best.t * (t.cum[j] - t.cum[best.i]);
+  return best;
+}
+function nearest(lat, lon){
+  const n = T.pts.length;
+  let best = {d:Infinity};
+  if (lastIdx != null) best = project(T, lat, lon, Math.max(0, lastIdx - 150), Math.min(n - 1, lastIdx + 400));
+  if (best.d > 60){ const full = project(T, lat, lon, 0, n - 1); if (full.d < best.d - 20) best = full; }
+  lastIdx = best.i;
+  return best;
+}
+function idxAt(d){
+  let lo = 0, hi = T.cum.length - 1;
+  while (hi - lo > 1){ const m = (lo + hi) >> 1; if (T.cum[m] < d) lo = m; else hi = m; }
+  return lo;
+}
+function eleAt(d){
+  const lo = idxAt(d), hi = Math.min(lo + 1, T.cum.length - 1), seg = T.cum[hi] - T.cum[lo] || 1;
+  return T.pts[lo].ele + (d - T.cum[lo]) / seg * (T.pts[hi].ele - T.pts[lo].ele);
+}
+
+function bearing(a, b){
+  const y = Math.sin(rad(b.lon - a.lon)) * Math.cos(rad(b.lat));
+  const x = Math.cos(rad(a.lat))*Math.sin(rad(b.lat)) - Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lon - a.lon));
+  return (deg(Math.atan2(y, x)) + 360) % 360;
+}
+function drawTrack(){
+  trackGroup.clearLayers();
+  if (!T) return;
+  const sun = document.body.classList.contains('sun'), w = sun ? 7 : 5;
+  const ll = T.pts.map(p => [p.lat, p.lon]);
+  L.polyline(ll, {color:'#fff', weight:w + 4, opacity:.9, interactive:false}).addTo(trackGroup);
+  if (colorMode !== 'slope' || !T.hasEle){
+    L.polyline(ll, {color:cssv('--track'), weight:w, opacity:1, interactive:false}).addTo(trackGroup);
+  } else {
+    let start = 0, cls = slopeClass(T.grade[0]);
+    for (let i = 1; i < T.pts.length; i++){
+      const c = i < T.pts.length - 1 ? slopeClass(T.grade[i]) : -1;
+      if (c !== cls){
+        L.polyline(ll.slice(start, i + 1), {color:COLORS[cls], weight:w, opacity:1, lineCap:'butt', interactive:false}).addTo(trackGroup);
+        start = i; cls = c;
+      }
+    }
+  }
+  // Flèches de sens de parcours
+  const step = clamp(T.total / 30, 150, 1000);
+  for (let d = step / 2; d < T.total; d += step){
+    const i = idxAt(d), a = T.pts[i], b = T.pts[Math.min(i + 1, T.pts.length - 1)];
+    const p = {lat:a.lat + (b.lat - a.lat) * ((d - T.cum[i]) / ((T.cum[i+1] - T.cum[i]) || 1)), lon:a.lon + (b.lon - a.lon) * ((d - T.cum[i]) / ((T.cum[i+1] - T.cum[i]) || 1))};
+    const r = bearing(a, b);
+    L.marker([p.lat, p.lon], {interactive:false, keyboard:false, icon:L.divIcon({className:'dir', iconSize:[16,16], iconAnchor:[8,8],
+      html:`<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(${r}deg)"><path d="M3 13 L8 2.5 L13 13 L8 10 Z" fill="#fff" stroke="#16181D" stroke-width="1.4" stroke-linejoin="round"/></svg>`})}).addTo(trackGroup);
+  }
+}
+
+function showTrack(fit){
+  lastIdx = null; alerted = new Set(); sess = null;
   trackLine = L.polyline(T.pts.map(p => [p.lat, p.lon]));
   drawTrack();
   wptLayer.clearLayers();
   T.wpts.forEach(w => L.marker([w.lat, w.lon], {icon:L.divIcon({className:'wpt', html:'<div></div>', iconSize:[12,12]})})
     .bindTooltip(w.name || 'Point', {direction:'top'}).addTo(wptLayer));
   const s = T.pts[0];
-  L.circleMarker([s.lat, s.lon], {radius:6, color:'#fff', weight:2, fillColor:'#2E7D32', fillOpacity:1}).addTo(wptLayer).bindTooltip('Départ');
+  L.circleMarker([s.lat, s.lon], {radius:7, color:'#fff', weight:3, fillColor:'#2E9E4F', fillOpacity:1}).addTo(wptLayer).bindTooltip('Départ');
   if (fit) map.fitBounds(trackLine.getBounds(), fitPad());
   $('tname').textContent = T.name;
   $('tmeta').textContent = `${fr(T.total/1000, 1)} km, D+ ${fr(Math.round(T.up))} m`;
   $('rest').textContent = fr(T.total/1000, 1);
-  $('uprest').textContent = fr(Math.round(T.up));
+  $('done').textContent = '0';
+  $('uprest').textContent = T.hasEle ? fr(Math.round(T.up)) : '–';
   $('welcome').hidden = true;
-  drawProfile(null);
-  try { localStorage.setItem('tvtt-gpx', text); localStorage.setItem('tvtt-name', T.name); } catch(e){}
+  lastAlong = null;
+  drawProfile(null); updateNav(null);
+}
+
+/* ---------- Bibliothèque de traces (IndexedDB) ---------- */
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('tracevtt', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('tracks', {keyPath:'id'});
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const t = db.transaction('tracks', mode), r = fn(t.objectStore('tracks'));
+      t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error);
+    });
+  };
+  return {all:() => tx('readonly', s => s.getAll()), put:v => tx('readwrite', s => s.put(v)),
+          get:id => tx('readonly', s => s.get(id)), del:id => tx('readwrite', s => s.delete(id))};
+})();
+
+function openRec(rec, fit = true){
+  const g = parseGPX(rec.gpx);
+  let pts = g.pts;
+  if (store.get('tvtt-rev-' + rec.id, '0') === '1') pts = pts.slice().reverse();
+  T = buildTrack(pts, g.wpts, rec.name || g.name || 'Trace');
+  trackRec = rec;
+  store.set('tvtt-cur', rec.id);
+  showTrack(fit);
+}
+async function addFile(text, fileName){
+  const g = parseGPX(text);                          // valide le fichier
+  const tmp = buildTrack(g.pts, g.wpts, g.name);
+  const rec = {id:Date.now().toString(36), name:g.name || (fileName || 'Trace').replace(/\.gpx$/i, ''), gpx:text,
+    total:tmp.total, up:tmp.up, added:Date.now()};
+  try { await idb.put(rec); } catch(e){ toast('Trace ouverte, mais pas enregistrée dans la bibliothèque'); }
+  openRec(rec);
+  renderLib();
+}
+async function renderLib(){
+  const box = $('lib'); box.innerHTML = '';
+  let list = [];
+  try { list = (await idb.all()).sort((a, b) => b.added - a.added); } catch(e){}
+  if (!list.length){ box.innerHTML = '<p class="hint">Les traces que tu ouvres sont gardées ici.</p>'; return; }
+  list.forEach(r => {
+    const row = document.createElement('div'); row.className = 'lib-row';
+    const b = document.createElement('button'); b.className = 'opt';
+    b.setAttribute('aria-pressed', trackRec && trackRec.id === r.id);
+    b.innerHTML = `<span>${esc(r.name)}</span><small>${fr(r.total/1000, 1)} km, D+ ${fr(Math.round(r.up))} m</small>`;
+    b.onclick = () => { try { openRec(r); $('sheet').hidden = true; } catch(e){ toast(e.message); } };
+    const del = document.createElement('button'); del.className = 'danger'; del.textContent = '✕';
+    del.setAttribute('aria-label', 'Supprimer ' + r.name);
+    del.onclick = async () => {
+      if (!confirm(`Supprimer « ${r.name} » ?`)) return;
+      await idb.del(r.id); store.del('tvtt-rev-' + r.id);
+      renderLib();
+    };
+    row.append(b, del); box.appendChild(row);
+  });
 }
 
 function onFile(e){
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = () => {
-    try { loadTrack(r.result, f.name); toast('Trace chargée'); }
-    catch(err){ $('err').textContent = err.message; $('welcome').hidden = false; }
+  r.onload = async () => {
+    try { await addFile(r.result, f.name); $('sheet').hidden = true; toast('Trace chargée'); }
+    catch(err){ $('err').textContent = err.message; if (!T) $('welcome').hidden = false; else toast(err.message); }
   };
   r.readAsText(f);
   e.target.value = '';
 }
 $('file1').addEventListener('change', onFile);
 $('file2').addEventListener('change', onFile);
-$('nogpx').addEventListener('click', () => { $('welcome').hidden = true; });
-
-/* Projection de la position sur la trace */
-function nearest(lat, lon){
-  const n = T.pts.length, ky = R * Math.PI / 180, kx = ky * Math.cos(rad(lat));
-  const scan = (a, b) => {
-    let best = {d:Infinity, i:0, t:0};
-    for (let i = a; i < b; i++){
-      const p = T.pts[i], q = T.pts[i+1];
-      const ax = (p.lon-lon)*kx, ay = (p.lat-lat)*ky, dx = (q.lon-p.lon)*kx, dy = (q.lat-p.lat)*ky;
-      const L2 = dx*dx + dy*dy;
-      let t = L2 ? -(ax*dx + ay*dy) / L2 : 0; t = Math.max(0, Math.min(1, t));
-      const d = Math.hypot(ax + t*dx, ay + t*dy);
-      if (d < best.d) best = {d, i, t};
-    }
-    return best;
-  };
-  let best = {d:Infinity};
-  if (lastIdx != null) best = scan(Math.max(0, lastIdx-150), Math.min(n-1, lastIdx+400));
-  if (best.d > 60){ const full = scan(0, n-1); if (full.d < best.d - 20) best = full; }
-  lastIdx = best.i;
-  const i = best.i, j = Math.min(i+1, n-1);
-  best.along = T.cum[i] + best.t * (T.cum[j] - T.cum[i]);
-  best.ele = T.pts[i].ele + best.t * (T.pts[j].ele - T.pts[i].ele);
-  best.upDone = T.cumUp[i];
-  return best;
-}
+$('nogpx').addEventListener('click', () => { $('welcome').hidden = true; updateNav(null); });
+$('rev').addEventListener('click', () => {
+  if (!trackRec) return;
+  const k = 'tvtt-rev-' + trackRec.id;
+  store.set(k, store.get(k, '0') === '1' ? '0' : '1');
+  openRec(trackRec, false);
+  toast('Sens de parcours inversé');
+});
 
 /* ---------- Profil ---------- */
 const cv = $('profile'), ctx = cv.getContext('2d');
 function drawProfile(along){
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W) return;
   cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
   ctx.font = '600 11px Barlow, system-ui, sans-serif';
-  if (!T){ ctx.fillStyle = col('--muted'); ctx.fillText('Le profil de la trace s’affichera ici.', 4, H/2); return; }
-  if (!T.hasEle){ ctx.fillStyle = col('--muted'); ctx.fillText('Ce GPX ne contient pas d’altitudes.', 4, H/2); return; }
+  if (!T){ ctx.fillStyle = cssv('--muted'); ctx.fillText('Le profil de la trace s’affichera ici.', 4, H/2); return; }
+  if (!T.hasEle){ ctx.fillStyle = cssv('--muted'); ctx.fillText('Ce GPX ne contient pas d’altitudes.', 4, H/2); return; }
   const padL = 34, padB = 14, padT = 6, w = W - padL - 4, h = H - padB - padT;
   const span = Math.max(T.maxE - T.minE, 50), lo = T.minE - span*.05, hi = T.maxE + span*.08;
   const X = d => padL + d / T.total * w, Y = e => padT + h - (e - lo) / (hi - lo) * h;
@@ -418,48 +691,158 @@ function drawProfile(along){
   const area = new Path2D(line);
   area.lineTo(X(T.total), padT + h); area.lineTo(X(0), padT + h); area.closePath();
   if (colorMode === 'slope'){
-    // une bande verticale par pas de 1 px, couleur de la pente
-    ctx.save(); ctx.clip(area);
+    ctx.save(); ctx.clip(area); ctx.globalAlpha = .6;
     let i = 0;
     for (let x = padL; x < padL + w; x++){
       const d = (x - padL) / w * T.total;
       while (i < T.cum.length - 2 && T.cum[i+1] < d) i++;
-      ctx.fillStyle = SLOPES[slopeClass(T.grade[i])].color;
-      ctx.globalAlpha = .55; ctx.fillRect(x, padT, 1.2, h);
+      ctx.fillStyle = COLORS[slopeClass(T.grade[i])]; ctx.fillRect(x, padT, 1.2, h);
     }
     ctx.restore();
-    ctx.strokeStyle = col('--ink'); ctx.globalAlpha = .55; ctx.lineWidth = 1.2; ctx.stroke(line); ctx.globalAlpha = 1;
+    ctx.strokeStyle = cssv('--ink'); ctx.globalAlpha = .6; ctx.lineWidth = 1.2; ctx.stroke(line); ctx.globalAlpha = 1;
   } else {
-    ctx.fillStyle = col('--relief-soft'); ctx.fill(area);
-    ctx.strokeStyle = col('--relief'); ctx.lineWidth = 1.6; ctx.stroke(line);
+    ctx.fillStyle = cssv('--relief-soft'); ctx.fill(area);
+    ctx.strokeStyle = cssv('--relief'); ctx.lineWidth = 1.6; ctx.stroke(line);
   }
-  // partie déjà parcourue estompée
   if (along != null){
-    ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = col('--paper');
+    ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = cssv('--paper');
     ctx.fillRect(padL, padT, X(along) - padL, h); ctx.restore();
   }
-  // échelles
-  ctx.fillStyle = col('--muted'); ctx.textBaseline = 'middle';
+  ctx.fillStyle = cssv('--muted'); ctx.textBaseline = 'middle';
   ctx.fillText(Math.round(T.maxE), 2, Y(T.maxE)); ctx.fillText(Math.round(T.minE), 2, Y(T.minE));
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('0', padL, H - 2);
   const end = fr(T.total/1000, 1) + ' km'; ctx.fillText(end, W - 4 - ctx.measureText(end).width, H - 2);
   if (along != null){
-    const e = nearestEleAt(along), x = X(along), y = Y(e);
-    ctx.strokeStyle = col('--ink'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + h); ctx.stroke();
+    const x = X(along), y = Y(eleAt(along));
+    ctx.strokeStyle = cssv('--ink'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + h); ctx.stroke();
     ctx.fillStyle = '#16181D'; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
   }
 }
-function nearestEleAt(d){
-  let lo = 0, hi = T.cum.length - 1;
-  while (hi - lo > 1){ const m = (lo + hi) >> 1; if (T.cum[m] < d) lo = m; else hi = m; }
-  const seg = T.cum[hi] - T.cum[lo] || 1, t = (d - T.cum[lo]) / seg;
-  return T.pts[lo].ele + t * (T.pts[hi].ele - T.pts[lo].ele);
+
+/* ---------- Soleil (équation du lever/coucher) ---------- */
+function sunset(date, lat, lon){
+  const J = date.getTime() / 86400000 + 2440587.5;
+  const n = Math.round(J - 2451545.0009 + lon / 360);
+  const Js = 2451545.0009 - lon / 360 + n;            // midi solaire moyen
+  const M = (357.5291 + 0.98560028 * (Js - 2451545)) % 360, Mr = rad(M);
+  const C = 1.9148*Math.sin(Mr) + 0.02*Math.sin(2*Mr) + 0.0003*Math.sin(3*Mr);
+  const lam = rad((M + C + 180 + 102.9372) % 360);
+  const Jt = Js + 0.0053*Math.sin(Mr) - 0.0069*Math.sin(2*lam);
+  const dec = Math.asin(Math.sin(lam) * Math.sin(rad(23.4397)));
+  const cosw = (Math.sin(rad(-0.833)) - Math.sin(rad(lat))*Math.sin(dec)) / (Math.cos(rad(lat))*Math.cos(dec));
+  if (cosw < -1 || cosw > 1) return null;
+  return new Date((Jt + deg(Math.acos(cosw)) / 360 - 2440587.5) * 86400000);
 }
 
+/* ---------- Navigation : montée, arrivée, points ---------- */
+let sess = null, alerted = new Set();
+function modelHours(dist, up, down){
+  const a = A(), th = dist / 1000 / a.flat, tv = up / a.up + down / a.down;
+  return Math.max(th, tv) + Math.min(th, tv) / 2;
+}
+function climbLine(along){
+  if (!T.hasEle) return '';
+  if (!T.climbs.length) return 'Pas de montée notable sur la trace';
+  const a = along ?? 0;
+  for (const c of T.climbs){
+    const s = T.cum[c.i0], e = T.cum[c.i1];
+    if (a >= s && a < e){
+      const gain = Math.max(0, T.pts[c.i1].ele - eleAt(a)), d = e - a;
+      return `Montée : reste ${fr(Math.round(gain))} m D+ sur ${km(d)}, ${slopeTxt(gain / d * 100)}`;
+    }
+    if (a < s){
+      const gain = T.pts[c.i1].ele - T.pts[c.i0].ele, d = e - s;
+      return `${along == null ? 'Première' : 'Prochaine'} montée dans ${km(s - a)} : ${fr(Math.round(gain))} m D+ sur ${km(d)}, ${slopeTxt(gain / d * 100)}`;
+    }
+  }
+  return 'Plus de montée notable jusqu’à l’arrivée';
+}
+function updateNav(along){
+  const eta = $('i-eta');
+  eta.className = '';
+  if (!T){
+    $('i-climb').textContent = ''; $('i-wpt').textContent = '';
+    const p = lastFix;
+    const ss = p ? sunset(new Date(), p.lat, p.lon) : null;
+    eta.textContent = ss ? `Coucher du soleil ${hm(ss)}` : '';
+    return;
+  }
+  $('i-climb').textContent = climbLine(along);
+  const a = along ?? 0, i = idxAt(a);
+  const remH = modelHours(T.total - a, T.up - T.cumUp[i], T.down - T.cumDown[i]);
+  const ref = lastFix || T.pts[0], ss = sunset(new Date(), ref.lat, ref.lon);
+  const sun = ss ? `, coucher ${hm(ss)}` : '';
+  if (along == null || watchId == null){
+    eta.textContent = `Durée estimée ${dur(remH)} (${A().name})${sun}`;
+  } else {
+    let factor = 1;
+    if (sess && sess.moving > 600 && a - sess.along0 > 1000){
+      const i0 = idxAt(sess.along0);
+      const mh = modelHours(a - sess.along0, T.cumUp[i] - T.cumUp[i0], T.cumDown[i] - T.cumDown[i0]);
+      if (mh > 0.05) factor = clamp(sess.moving / 3600 / mh, 0.4, 2.5);
+    }
+    const arr = new Date(Date.now() + remH * factor * 3600000);
+    eta.textContent = `Arrivée vers ${hm(arr)}${sun}`;
+    if (ss && arr > ss) eta.className = 'late';
+    else if (ss && arr > ss - 45 * 60000) eta.className = 'soon';
+  }
+  const nx = T.wptA.find(w => w.along > a + 20);
+  $('i-wpt').textContent = nx ? `${nx.name || 'Point'} dans ${km(nx.along - a)}` : '';
+}
+
+/* ---------- Enregistrement de la sortie ---------- */
+const newRide = () => ({start:Date.now(), pts:[], dist:0, up:0, moving:0, ref:null});
+let ride; try { ride = JSON.parse(store.get('tvtt-ride', 'null')) || newRide(); } catch(e){ ride = newRide(); }
+const saveRide = () => store.set('tvtt-ride', JSON.stringify(ride));
+function rideAdd(c, t){
+  if (c.accuracy > 35) return;
+  const p = {lat:+c.latitude.toFixed(6), lon:+c.longitude.toFixed(6), ele:(c.altitude != null && !isNaN(c.altitude)) ? Math.round(c.altitude * 10) / 10 : null, t};
+  const lp = ride.pts[ride.pts.length - 1];
+  if (lp){
+    const d = hav(lp, p), dt = (t - lp.t) / 1000;
+    if (d < 5 && dt < 30) return;
+    ride.dist += d;
+    if (dt < 90 && dt > 0 && d / dt > A().moveSpd){ ride.moving += dt; if (sess) sess.moving += dt; }
+  }
+  if (p.ele != null){
+    if (ride.ref == null) ride.ref = p.ele;
+    else { const dd = p.ele - ride.ref; if (dd > 5){ ride.up += dd; ride.ref = p.ele; } else if (dd < -5) ride.ref = p.ele; }
+  }
+  ride.pts.push(p);
+  if (ride.pts.length % 10 === 0) saveRide();
+}
+function renderRide(){
+  const n = ride.pts.length;
+  $('rec-info').textContent = n < 2
+    ? 'L’enregistrement démarre avec le suivi.'
+    : `Depuis le ${new Date(ride.start).toLocaleDateString('fr-FR')} à ${hm(new Date(ride.start))} : ${km(ride.dist)}, D+ ${fr(Math.round(ride.up))} m, ${dur(ride.moving / 3600)} en mouvement.`;
+  $('rec-export').disabled = n < 2;
+}
+function rideGPX(){
+  const name = `Sortie du ${new Date(ride.start).toLocaleDateString('fr-FR')}`;
+  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Trace VTT" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>${esc(name)}</name><trkseg>\n`;
+  ride.pts.forEach(p => { s += `<trkpt lat="${p.lat}" lon="${p.lon}">${p.ele != null ? `<ele>${p.ele}</ele>` : ''}<time>${new Date(p.t).toISOString()}</time></trkpt>\n`; });
+  return s + '</trkseg></trk>\n</gpx>\n';
+}
+$('rec-export').addEventListener('click', async () => {
+  saveRide();
+  const fname = `sortie-${new Date(ride.start).toISOString().slice(0, 10)}.gpx`;
+  const file = new File([rideGPX()], fname, {type:'application/gpx+xml'});
+  if (navigator.canShare && navigator.canShare({files:[file]})){
+    try { await navigator.share({files:[file], title:fname}); return; } catch(e){ if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = fname;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+});
+$('rec-reset').addEventListener('click', () => {
+  if (ride.pts.length > 1 && !confirm('Effacer la sortie enregistrée et repartir de zéro ? Pense à l’exporter avant.')) return;
+  ride = newRide(); saveRide(); vmax = 0; $('vmax').textContent = '0'; renderRide();
+});
+
 /* ---------- GPS ---------- */
-let watchId = null, wakeLock = null, last = null, spdS = 0, vmax = 0, lastAlong = null, offState = false, audio = null;
+let watchId = null, wakeLock = null, last = null, lastFix = null, spdS = 0, vmax = 0, lastAlong = null, offState = false, audio = null;
 
 function start(){
   if (!('geolocation' in navigator)){ toast('GPS indisponible sur cet appareil'); return; }
@@ -468,34 +851,34 @@ function start(){
   requestWake();
   try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch(e){}
   follow = true; $('center').classList.remove('hot');
+  sess = null;
 }
 function stop(){
   if (watchId != null) navigator.geolocation.clearWatch(watchId);
   watchId = null; $('go').textContent = 'Reprendre'; $('go').classList.remove('running');
   if (wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+  saveRide(); updateNav(lastAlong);
 }
 $('go').addEventListener('click', () => watchId == null ? start() : stop());
 
-async function requestWake(){
-  try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
-}
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && watchId != null) requestWake(); });
+async function requestWake(){ try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && watchId != null) requestWake();
+  if (document.visibilityState === 'hidden') saveRide();
+});
 
 function onPosErr(e){
-  const msg = e.code === 1 ? 'Autorise la localisation pour Safari dans Réglages, Confidentialité, Service de localisation.'
-    : 'Signal GPS faible, recherche en cours…';
   $('alt-tag').textContent = 'GPS : ' + (e.code === 1 ? 'refusé' : 'recherche');
-  toast(msg, 4000);
+  toast(e.code === 1 ? 'Localisation refusée : autorise-la dans Réglages, Safari, Position.' : 'Signal GPS faible, recherche en cours…', 4000);
 }
 
+let meMarker = null, accCircle = null, follow = true;
 function onPos(p){
   const c = p.coords, now = p.timestamp, here = {lat:c.latitude, lon:c.longitude};
-  // Vitesse : valeur GPS si fournie, sinon calculée entre deux points
+  lastFix = {lat:here.lat, lon:here.lon, alt:c.altitude, acc:c.accuracy, t:now};
+
   let v = (c.speed != null && c.speed >= 0) ? c.speed : null;
-  if (v == null && last){
-    const dt = (now - last.t) / 1000;
-    if (dt > 0.5) v = hav(last, here) / dt;
-  }
+  if (v == null && last){ const dt = (now - last.t) / 1000; if (dt > 0.5) v = hav(last, here) / dt; }
   if (v != null){
     spdS = spdS * 0.4 + v * 0.6;
     const kmh = spdS < 0.5 ? 0 : spdS * 3.6;
@@ -503,39 +886,44 @@ function onPos(p){
     if (c.accuracy < 25 && kmh > vmax && kmh < 120){ vmax = kmh; $('vmax').textContent = fr(vmax); }
   }
   last = {lat:here.lat, lon:here.lon, t:now};
+  rideAdd(c, now);
 
-  // Carte
-  const ll = [here.lat, here.lon];
+  const ll = L.latLng(here.lat, here.lon);
   if (!meMarker){
-    meMarker = L.marker(ll, {icon:L.divIcon({className:'me', html:'<div class="me-dot"><div class="me-arrow"></div></div>', iconSize:[28,28], iconAnchor:[14,14]}), zIndexOffset:1000}).addTo(map);
+    meMarker = L.marker(ll, {icon:L.divIcon({className:'me', html:'<div class="me-dot"><div class="me-arrow"></div></div>', iconSize:[28,28], iconAnchor:[14,14]}), zIndexOffset:1000, interactive:false}).addTo(map);
     accCircle = L.circle(ll, {radius:c.accuracy, weight:1, color:'#16181D', fillOpacity:.07, interactive:false}).addTo(map);
-    showAt(L.latLng(ll), Math.max(map.getZoom(), 15));
+    showAt(ll, Math.max(map.getZoom(), 15));
   } else { meMarker.setLatLng(ll); accCircle.setLatLng(ll).setRadius(c.accuracy); }
   const arrow = meMarker.getElement() && meMarker.getElement().querySelector('.me-arrow');
   if (arrow){
     if (c.heading != null && !isNaN(c.heading) && spdS > 1){ arrow.style.display = 'block'; arrow.style.transform = `rotate(${c.heading}deg)`; }
     else arrow.style.display = 'none';
   }
-  if (follow) showAt(L.latLng(ll));
+  if (follow) showAt(ll);
 
-  // Trace
   let traceEle = null;
   if (T){
     const n = nearest(here.lat, here.lon);
-    traceEle = n.ele;
+    traceEle = eleAt(n.along);
     lastAlong = n.along;
+    if (!sess && n.d < 100) sess = {along0:n.along, moving:0};
+    const i = idxAt(n.along);
     $('done').textContent = fr(n.along / 1000, 1);
     $('rest').textContent = fr(Math.max(0, T.total - n.along) / 1000, 1);
-    $('uprest').textContent = T.hasEle ? fr(Math.max(0, Math.round(T.up - n.upDone))) : '–';
+    $('uprest').textContent = T.hasEle ? fr(Math.max(0, Math.round(T.up - T.cumUp[i]))) : '–';
     const off = n.d > Math.max(40, c.accuracy * 1.5);
     $('offtrack').textContent = `Hors trace, ${fr(Math.round(n.d))} m`;
     $('offtrack').classList.toggle('on', off);
     if (off && !offState) beep();
     offState = off;
     drawProfile(n.along);
+    // Alerte à l'approche des points du GPX
+    T.wpts.forEach(w => {
+      if (!alerted.has(w) && hav(here, w) < 100){ alerted.add(w); toast(`À proximité : ${w.name || 'point de la trace'}`, 4000); beep(); }
+    });
   }
+  updateNav(T ? lastAlong : null);
 
-  // Altitude : GPS en priorité, sinon altitude de la trace
   if (c.altitude != null && !isNaN(c.altitude)){
     $('alt').textContent = fr(Math.round(c.altitude));
     $('alt-lbl').textContent = 'Altitude GPS';
@@ -545,6 +933,7 @@ function onPos(p){
     $('alt-lbl').textContent = 'Altitude trace';
     $('alt-tag').textContent = 'GPS sans altitude';
   }
+  if (!$('sheet').hidden) renderSOS();
 }
 
 function beep(){
@@ -556,24 +945,80 @@ function beep(){
   } catch(e){}
 }
 
-/* ---------- Commandes ---------- */
+/* ---------- Secours ---------- */
+function dms(v, pos, neg){
+  const h = v < 0 ? neg : pos; v = Math.abs(v);
+  let d = Math.floor(v), m = Math.floor((v - d) * 60), s = Math.round(((v - d) * 60 - m) * 600) / 10;
+  if (s >= 60){ s = 0; m++; } if (m >= 60){ m = 0; d++; }
+  return `${d}°${String(m).padStart(2, '0')}′${s.toFixed(1).padStart(4, '0')}″ ${h}`;
+}
+function sosText(){
+  const p = lastFix; if (!p) return '';
+  const alt = p.alt != null && !isNaN(p.alt) ? `, altitude ${Math.round(p.alt)} m` : '';
+  return `J’ai besoin d’aide. Ma position : ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)} (${dms(p.lat, 'N', 'S')} ${dms(p.lon, 'E', 'O')})${alt}, précision ${Math.round(p.acc)} m. https://maps.apple.com/?ll=${p.lat.toFixed(5)},${p.lon.toFixed(5)}&q=Position`;
+}
+function renderSOS(){
+  const p = lastFix;
+  if (!p){ $('sos-dd').textContent = 'Position inconnue'; $('sos-dms').textContent = 'Recherche de la position…'; $('sos-meta').textContent = ''; return; }
+  $('sos-dd').textContent = `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
+  $('sos-dms').textContent = `${dms(p.lat, 'N', 'S')}  ${dms(p.lon, 'E', 'O')}`;
+  const alt = p.alt != null && !isNaN(p.alt) ? `Altitude ${fr(Math.round(p.alt))} m, ` : '';
+  $('sos-meta').textContent = `${alt}précision ${fr(Math.round(p.acc))} m, relevée à ${hm(new Date(p.t))}`;
+}
+function refreshFix(){
+  if (watchId != null || !('geolocation' in navigator)) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const c = pos.coords; lastFix = {lat:c.latitude, lon:c.longitude, alt:c.altitude, acc:c.accuracy, t:pos.timestamp}; renderSOS(); updateNav(lastAlong);
+  }, () => {}, {enableHighAccuracy:true, timeout:15000, maximumAge:60000});
+}
+$('sos-sms').addEventListener('click', () => {
+  if (!lastFix){ toast('Position pas encore connue'); return; }
+  location.href = 'sms:&body=' + encodeURIComponent(sosText());
+});
+$('sos-share').addEventListener('click', async () => {
+  if (!lastFix){ toast('Position pas encore connue'); return; }
+  try { await navigator.share({text:sosText()}); }
+  catch(e){ if (e.name !== 'AbortError'){ try { await navigator.clipboard.writeText(sosText()); toast('Position copiée'); } catch(err){} } }
+});
+
+/* ---------- Centrer, profil, verrou ---------- */
 map.on('dragstart', () => { follow = false; $('center').classList.add('hot'); });
 $('center').addEventListener('click', () => {
   follow = true; $('center').classList.remove('hot');
   if (meMarker) showAt(meMarker.getLatLng(), Math.max(map.getZoom(), 15));
   else if (trackLine) map.fitBounds(trackLine.getBounds(), fitPad());
 });
-/* ---------- Cartes : fond et hors ligne ---------- */
+function setProfile(on){
+  document.body.classList.toggle('noprof', !on);
+  $('prof').setAttribute('aria-pressed', on);
+  store.set('tvtt-prof', on ? '1' : '0');
+  layout();
+}
+$('prof').addEventListener('click', () => setProfile(document.body.classList.contains('noprof')));
+
+let holdT = null;
+$('lockb').addEventListener('click', () => { $('lock').hidden = false; });
+const unlockBtn = $('unlock');
+unlockBtn.addEventListener('pointerdown', e => {
+  e.preventDefault(); unlockBtn.classList.add('holding');
+  holdT = setTimeout(() => { $('lock').hidden = true; unlockBtn.classList.remove('holding'); }, 900);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => unlockBtn.addEventListener(ev, () => { clearTimeout(holdT); unlockBtn.classList.remove('holding'); }));
+$('lock').addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+$('lock').addEventListener('contextmenu', e => e.preventDefault());
+
+/* ---------- Menu ---------- */
 const TILE_CACHE = 'tvtt-tiles', MAX_TILES = 15000;
 let dlZone = 'trace', dlDetail = 'std', dlRunning = false, dlAbort = false;
-const lay = () => layers[layerIdx];
 
-function setLayer(i){
-  map.removeLayer(lay().l); layerIdx = i; lay().l.addTo(map);
-  try { localStorage.setItem('tvtt-layer', i); } catch(e){}
-  applyOfflineZoom(); renderSheet();
-}
-function renderSheet(){
+function seg(id, value){ $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === String(value))); }
+function onSeg(id, fn){ $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (b && !b.disabled) fn(b.dataset.v); }); }
+
+function renderMenu(){
+  renderSOS(); refreshFix();
+  seg('seg-act', act); $('act-hint').textContent = A().hint;
+  renderLib(); $('rev').disabled = !trackRec;
+  renderRide();
   $('layer-list').innerHTML = '';
   layers.forEach((d, i) => {
     const b = document.createElement('button'); b.className = 'opt';
@@ -582,25 +1027,46 @@ function renderSheet(){
     b.onclick = () => setLayer(i);
     $('layer-list').appendChild(b);
   });
+  $('ov-sec').hidden = act !== 'ski';
+  seg('seg-ov', ovOn ? 'on' : 'off');
+  seg('seg-color', colorMode);
+  $('legend').innerHTML = colorMode === 'slope' ? legendLabels().map((l, i) => `<span><i style="background:${COLORS[i]}"></i>${l}</span>`).join('') : '';
+  seg('seg-big', document.body.classList.contains('big') ? 1 : 0);
+  seg('seg-sun', document.body.classList.contains('sun') ? 1 : 0);
+  renderOffline();
+}
+function setLayer(i){
+  map.removeLayer(lay().l); layerIdx = i; lay().l.addTo(map); lay().l.bringToBack();
+  store.set('tvtt-layer', i); applyOfflineZoom(); renderMenu();
+}
+function setAct(v){
+  act = ACTS[v] ? v : 'vtt'; store.set('tvtt-act', act);
+  ovOn = act === 'ski' && store.get('tvtt-ov-ski', 'on') === 'on';
+  applyOverlay();
+  if (T){ T.climbs = findClimbs(T); drawTrack(); drawProfile(lastAlong); }
+  updateNav(lastAlong);
+}
+onSeg('seg-act', v => { setAct(v); renderMenu(); });
+onSeg('seg-ov', v => { ovOn = v === 'on'; store.set('tvtt-ov-ski', v); applyOverlay(); renderMenu(); });
+onSeg('seg-color', v => { colorMode = v; store.set('tvtt-color', v); drawTrack(); drawProfile(lastAlong); renderMenu(); });
+onSeg('seg-big', v => { document.body.classList.toggle('big', v === '1'); store.set('tvtt-big', v); layout(); renderMenu(); });
+onSeg('seg-sun', v => { document.body.classList.toggle('sun', v === '1'); store.set('tvtt-sun', v); drawTrack(); layout(); renderMenu(); });
+onSeg('seg-zone', v => { dlZone = v; renderOffline(); });
+onSeg('seg-detail', v => { dlDetail = v; renderOffline(); });
+
+/* ---------- Cartes hors ligne ---------- */
+function renderOffline(){
   const d = lay(), can = d.dlStd > 0 && 'caches' in window;
   $('dl-hint').textContent = !('caches' in window) ? 'Le hors ligne demande l’app ouverte en HTTPS (GitHub Pages).'
-    : d.dlStd ? `Fond ${d.name}. Standard jusqu’au zoom ${d.dlStd}, détaillé jusqu’au zoom ${d.dlMax}.`
+    : d.dlStd ? `Fond ${d.name}${ovOn ? ' et pentes du terrain' : ''}. Standard jusqu’au zoom ${d.dlStd}, détaillé jusqu’au zoom ${d.dlMax}.`
     : 'OpenStreetMap interdit le téléchargement en masse. Choisis OpenTopoMap, Plan IGN ou Swisstopo.';
-  ['seg-zone','seg-detail'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.disabled = !can || dlRunning));
+  if (!T && dlZone === 'trace') dlZone = 'view';
+  seg('seg-zone', dlZone); seg('seg-detail', dlDetail);
+  ['seg-zone', 'seg-detail'].forEach(id => $(id).querySelectorAll('button').forEach(b => b.disabled = !can || dlRunning));
   $('seg-zone').querySelector('[data-v=trace]').disabled = !can || !T || dlRunning;
-  if (!T && dlZone === 'trace') setSeg('seg-zone', 'view');
   $('dl-go').disabled = !can && !dlRunning;
   estimate(); storedInfo();
 }
-function setSeg(id, v){
-  if (id === 'seg-zone') dlZone = v; else dlDetail = v;
-  $(id).querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v));
-}
-['seg-zone','seg-detail'].forEach(id => $(id).addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b || b.disabled) return; setSeg(id, b.dataset.v); estimate();
-}));
-
-// Calcul des tuiles
 const lon2x = (lon, z) => Math.floor((lon + 180) / 360 * 2**z);
 const lat2y = (lat, z) => { const r = rad(lat); return Math.floor((1 - Math.log(Math.tan(r) + 1/Math.cos(r)) / Math.PI) / 2 * 2**z); };
 function computeTiles(){
@@ -619,8 +1085,7 @@ function computeTiles(){
       for (let i = 0; i < T.pts.length - 1; i++){
         const p = T.pts[i], q = T.pts[i+1], steps = Math.max(1, Math.ceil((T.cum[i+1] - T.cum[i]) / (tileM / 2)));
         for (let k = 0; k < steps; k++){
-          const lat = p.lat + (q.lat - p.lat) * k / steps, lon = p.lon + (q.lon - p.lon) * k / steps;
-          const tx = lon2x(lon, z), ty = lat2y(lat, z);
+          const tx = lon2x(p.lon + (q.lon - p.lon) * k / steps, z), ty = lat2y(p.lat + (q.lat - p.lat) * k / steps, z);
           for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) set.add(`${z}/${tx+dx}/${ty+dy}`);
         }
       }
@@ -629,61 +1094,59 @@ function computeTiles(){
   return [...set].map(k => k.split('/').map(Number));
 }
 const tileUrl = (d, z, x, y) => L.Util.template(d.url, {s:d.sub ? d.sub[Math.abs(x + y) % d.sub.length] : '', z, x, y});
-
+function jobs(){
+  const d = lay(), tiles = computeTiles(), list = tiles.map(([z, x, y]) => ({url:tileUrl(d, z, x, y), base:true}));
+  if (ovOn) overlays.forEach(o => tiles.forEach(([z, x, y]) => { if (z <= o.maxNative) list.push({url:tileUrl(o, z, x, y), base:false}); }));
+  return {list, n:tiles.length};
+}
 function estimate(){
   if (dlRunning) return;
   const d = lay();
   if (!d.dlStd || !('caches' in window)){ $('dl-est').textContent = ''; return; }
-  const n = computeTiles().length, mo = n * d.kb / 1024;
+  const {list, n} = jobs(), mo = (n * d.kb + (list.length - n) * 8) / 1024;
   $('dl-est').textContent = n > MAX_TILES
     ? `${fr(n)} tuiles : zone trop grande. Zoome sur la carte ou choisis Standard.`
-    : `${fr(n)} tuiles, environ ${fr(mo, mo < 10 ? 1 : 0)} Mo`;
+    : `${fr(n)} tuiles${ovOn ? ' (plus les pentes)' : ''}, environ ${fr(mo, mo < 10 ? 1 : 0)} Mo`;
   $('dl-go').disabled = n > MAX_TILES;
 }
-
 async function download(){
-  const d = lay(), tiles = computeTiles();
-  if (tiles.length > MAX_TILES) return;
+  const d = lay(), {list, n} = jobs();
+  if (n > MAX_TILES) return;
   dlRunning = true; dlAbort = false;
-  $('dl-go').textContent = 'Annuler'; $('dl-go').classList.add('running');
-  $('dl-bar').classList.add('on'); renderSheet();
+  $('dl-go').textContent = 'Annuler'; $('dl-go').classList.add('running'); $('dl-bar').classList.add('on'); renderOffline();
   try { await navigator.storage?.persist?.(); } catch(e){}
   const cache = await caches.open(TILE_CACHE);
   let i = 0, done = 0, fail = 0, full = false;
   const show = () => {
-    $('dl-bar').firstElementChild.style.width = (done / tiles.length * 100) + '%';
-    $('dl-status').textContent = `${fr(done)} sur ${fr(tiles.length)} tuiles` + (fail ? `, ${fr(fail)} échecs` : '');
+    $('dl-bar').firstElementChild.style.width = (done / list.length * 100) + '%';
+    $('dl-status').textContent = `${fr(done)} sur ${fr(list.length)} tuiles` + (fail ? `, ${fr(fail)} échecs` : '');
   };
   const worker = async () => {
-    while (i < tiles.length && !dlAbort && !full){
-      const [z, x, y] = tiles[i++], url = tileUrl(d, z, x, y);
+    while (i < list.length && !dlAbort && !full){
+      const job = list[i++];
       try {
-        if (!(await cache.match(url))){
+        if (!(await cache.match(job.url))){
           let r;
-          try { r = await fetch(url, {mode:'cors'}); } catch(e){ r = await fetch(url, {mode:'no-cors'}); }
-          if (r.ok || r.type === 'opaque') await cache.put(url, r); else fail++;
+          try { r = await fetch(job.url, {mode:'cors'}); } catch(e){ r = await fetch(job.url, {mode:'no-cors'}); }
+          if (r.ok || r.type === 'opaque') await cache.put(job.url, r); else if (job.base) fail++;
         }
-      } catch(e){ if (e && e.name === 'QuotaExceededError') full = true; else fail++; }
-      done++; if (done % 10 === 0 || done === tiles.length) show();
+      } catch(e){ if (e && e.name === 'QuotaExceededError') full = true; else if (job.base) fail++; }
+      done++; if (done % 10 === 0 || done === list.length) show();
     }
   };
   await Promise.all(Array.from({length:6}, worker));
   show();
-  const zMax = dlDetail === 'max' ? d.dlMax : d.dlStd;
-  try {
-    const k = 'tvtt-dlz-' + layerIdx;
-    localStorage.setItem(k, Math.max(zMax, +(localStorage.getItem(k) || 0)));
-  } catch(e){}
+  const zMax = dlDetail === 'max' ? d.dlMax : d.dlStd, k = 'tvtt-dlz-' + layerIdx;
+  store.set(k, Math.max(zMax, +store.get(k, 0)));
   $('dl-status').textContent = full ? 'Stockage plein : supprime des cartes ou réduis la zone.'
     : dlAbort ? `Téléchargement annulé après ${fr(done)} tuiles.`
-    : `Carte enregistrée : ${fr(done - fail)} tuiles` + (fail ? `, ${fr(fail)} échecs (relance pour compléter)` : '') + '.';
+    : `Carte enregistrée` + (fail ? `, ${fr(fail)} tuiles en échec (relance pour compléter)` : '') + '.';
   dlRunning = false;
   $('dl-go').textContent = 'Télécharger'; $('dl-go').classList.remove('running');
   setTimeout(() => $('dl-bar').classList.remove('on'), 1200);
-  renderSheet();
+  renderOffline();
 }
 $('dl-go').addEventListener('click', () => dlRunning ? (dlAbort = true) : download());
-
 async function storedInfo(){
   if (!('caches' in window)) return;
   try {
@@ -697,61 +1160,71 @@ async function storedInfo(){
 $('dl-clear').addEventListener('click', async () => {
   if (!confirm('Supprimer toutes les cartes enregistrées ?')) return;
   await caches.delete(TILE_CACHE);
-  try { layers.forEach((_, i) => localStorage.removeItem('tvtt-dlz-' + i)); } catch(e){}
-  $('dl-status').textContent = 'Cartes supprimées.'; renderSheet(); applyOfflineZoom();
+  layers.forEach((_, i) => store.del('tvtt-dlz-' + i));
+  $('dl-status').textContent = 'Cartes supprimées.'; renderOffline(); applyOfflineZoom();
 });
-
-// Hors réseau : on bloque le zoom au niveau téléchargé pour ne pas tomber sur une carte vide
 function applyOfflineZoom(){
-  let z = 0; try { z = +(localStorage.getItem('tvtt-dlz-' + layerIdx) || 0); } catch(e){}
+  const z = +store.get('tvtt-dlz-' + layerIdx, 0);
   map.setMaxZoom(!navigator.onLine && z ? z : lay().maxZoom);
 }
 window.addEventListener('online', () => { applyOfflineZoom(); toast('Réseau retrouvé'); });
 window.addEventListener('offline', () => { applyOfflineZoom(); toast('Hors réseau : cartes enregistrées'); });
 
-$('maps').addEventListener('click', () => { $('sheet').hidden = false; renderSheet(); renderLegend(); });
-$('seg-color').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  colorMode = b.dataset.v;
-  try { localStorage.setItem('tvtt-color', colorMode); } catch(err){}
-  renderLegend(); drawTrack(); drawProfile(lastAlong);
-});
+$('menu').addEventListener('click', () => { $('sheet').hidden = false; renderMenu(); });
 $('sheet-close').addEventListener('click', () => { $('sheet').hidden = true; });
 $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) $('sheet').hidden = true; });
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
-applyOfflineZoom();
-
+/* ---------- Divers ---------- */
 let toastT;
 function toast(msg, ms = 1800){
   const t = $('toast'); t.textContent = msg; t.classList.add('on');
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms);
 }
-function panelH(){ return $('panel').offsetHeight + 16; }
-function setProfile(on){
-  document.body.classList.toggle('noprof', !on);
-  $('prof').setAttribute('aria-pressed', on);
-  try { localStorage.setItem('tvtt-prof', on ? '1' : '0'); } catch(e){}
-  layout();
-}
-$('prof').addEventListener('click', () => setProfile(document.body.classList.contains('noprof')));
-let profOn = true; try { profOn = localStorage.getItem('tvtt-prof') !== '0'; } catch(e){}
-document.body.classList.toggle('noprof', !profOn); $('prof').setAttribute('aria-pressed', profOn);
-window.addEventListener('orientationchange', () => setTimeout(() => { layout(); map.invalidateSize(); if (follow && meMarker) showAt(meMarker.getLatLng()); }, 300));
 function layout(){
-  document.documentElement.style.setProperty('--panel-h', panelH() + 'px');
+  document.documentElement.style.setProperty('--panel-h', ($('panel').offsetHeight + 16) + 'px');
+  document.documentElement.style.setProperty('--hud-b', ($('hud').getBoundingClientRect().bottom + 8) + 'px');
   drawProfile(lastAlong);
 }
 window.addEventListener('resize', layout);
+window.addEventListener('orientationchange', () => setTimeout(() => { layout(); map.invalidateSize(); if (follow && meMarker) showAt(meMarker.getLatLng()); }, 300));
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { drawTrack(); layout(); });
 
-/* Dernière trace utilisée */
-try {
-  const saved = localStorage.getItem('tvtt-gpx');
-  if (saved){ loadTrack(saved, localStorage.getItem('tvtt-name') || 'Trace'); }
-} catch(e){}
+/* ---------- Démarrage ---------- */
+document.body.classList.toggle('big', store.get('tvtt-big', '0') === '1');
+document.body.classList.toggle('sun', store.get('tvtt-sun', '0') === '1');
+const profOn = store.get('tvtt-prof', '1') !== '0';
+document.body.classList.toggle('noprof', !profOn); $('prof').setAttribute('aria-pressed', profOn);
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+applyOfflineZoom();
 layout();
 if (document.fonts) document.fonts.ready.then(layout);
+
+const libReady = (async () => {
+  try {
+    let list = await idb.all();
+    const old = store.get('tvtt-gpx', null);
+    if (!list.length && old){                         // reprise de la trace de l'ancienne version
+      const g = parseGPX(old), tmp = buildTrack(g.pts, g.wpts, g.name);
+      await idb.put({id:'ancienne', name:store.get('tvtt-name', g.name || 'Trace'), gpx:old, total:tmp.total, up:tmp.up, added:Date.now()});
+      store.del('tvtt-gpx'); list = await idb.all();
+    }
+    const cur = list.find(r => r.id === store.get('tvtt-cur', '')) || list.sort((a, b) => b.added - a.added)[0];
+    if (cur) openRec(cur);
+  } catch(e){
+    const old = store.get('tvtt-gpx', null);
+    if (old) try { openRec({id:'ancienne', name:store.get('tvtt-name', 'Trace'), gpx:old}); } catch(err){}
+  }
+  updateNav(lastAlong);
+})();
+$('actpick').querySelectorAll('.actbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === act));
+$('actpick').addEventListener('click', async e => {
+  const b = e.target.closest('.actbtn'); if (!b) return;
+  setAct(b.dataset.v);
+  $('actpick').hidden = true;
+  await libReady;
+  if (!T) $('welcome').hidden = false;
+  toast(A().name);
+});
 })();
 </script>
 </body>
