@@ -1,12 +1,13 @@
 // Trace VTT : fonctionnement hors réseau
-const SHELL = 'tvtt-shell-v2';
+const SHELL = 'tvtt-shell-v3';
 const TILES = 'tvtt-tiles';
 const TILE_HOSTS = ['tile.opentopomap.org', 'data.geopf.fr', 'wmts.geo.admin.ch', 'tile.openstreetmap.org'];
-const LIBS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const LIBS = ['cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 const SHELL_URLS = [
-  './', './index.html',
+  './', './index.html', './icon-180.png', './favicon.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
+  'https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js'
 ];
 
 self.addEventListener('install', e => {

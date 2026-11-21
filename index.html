@@ -7,12 +7,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Trace VTT">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="favicon.png">
 <meta name="theme-color" content="#F3F5F2">
 <title>Trace VTT</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <style>
 :root{
   --paper:#F3F5F2; --panel:rgba(243,245,242,.95); --ink:#14201A; --muted:#3B4842;
@@ -227,6 +230,28 @@ body.trans.sun .hud{background:rgba(255,255,255,.45);text-shadow:0 0 2px #fff,0 
 .climbpop .v{font-family:var(--num);font-weight:700;font-size:76px;line-height:1;font-variant-numeric:tabular-nums}
 .climbpop .v small{font-size:.45em;color:var(--muted);margin-left:4px}
 .climbpop .d{font-size:24px;font-weight:600;margin-top:4px}
+.climbpop .e{font-size:26px;font-weight:700;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+.climbpop .s{font-size:21px;font-weight:600;color:var(--muted)}
+.climbpop .late{color:var(--warn)} .climbpop .soon{color:var(--soon)}
+/* Boussole / orientation de la carte */
+.compass{position:fixed;z-index:1000;right:12px;bottom:calc(var(--panel-h) + 8px);width:60px;height:60px;min-height:0;padding:0;border-radius:50%;
+  background:var(--paper);border:2px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.compass.on{border:3px solid var(--vis)}
+.compass svg{display:block;margin:auto}
+body.big .compass{width:72px;height:72px}
+.offtrack svg{vertical-align:middle;margin-right:8px}
+/* Résumé de sortie */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin:6px 0 16px}
+.stats div{display:flex;flex-direction:column}
+.stats span{font-size:19px;font-weight:600;color:var(--muted)}
+.stats b{font-family:var(--num);font-size:40px;line-height:1.05;font-variant-numeric:tabular-nums}
+.stats b small{font-size:.5em;color:var(--muted);margin-left:3px}
+#summary .card{max-height:92vh;overflow:auto}
+/* Météo */
+.wx{width:100%;border-collapse:collapse;font-family:var(--num);font-size:22px;font-variant-numeric:tabular-nums}
+.wx th{font-family:var(--txt);font-size:15px;color:var(--muted);font-weight:600;text-align:left;padding:2px 4px 4px}
+.wx td{padding:5px 4px;border-top:1px solid var(--line);white-space:nowrap}
+.wx .hot{color:var(--warn);font-weight:700}
 /* HUD réduit : seulement vitesse, altitude, reste */
 body.compact .sub{display:none}
 @media (prefers-reduced-motion: reduce){.panel{transition:none}}
@@ -251,7 +276,8 @@ body.compact .sub{display:none}
 </section>
 
 <div class="offtrack" id="offtrack" role="status"></div>
-<div class="climbpop" id="climbpop" aria-live="polite"><div class="k" id="cp-k"></div><div class="v" id="cp-v"></div><div class="d" id="cp-d"></div></div>
+<div class="climbpop" id="climbpop" aria-live="polite"><div class="k" id="cp-k"></div><div class="v" id="cp-v"></div><div class="d" id="cp-d"></div><div class="e" id="cp-e"></div><div class="s" id="cp-s"></div></div>
+<button class="compass" id="compass" aria-label="Orientation de la carte"><svg width="40" height="40" viewBox="0 0 40 40"><g id="needle" style="transform-origin:20px 20px"><path d="M20 3 L27 20 L13 20 Z" fill="#D7261E"/><path d="M20 37 L27 20 L13 20 Z" fill="#9AA6A0"/><circle cx="20" cy="20" r="3" fill="#16181D"/></g></svg></button>
 <button class="fab" id="show-panel" aria-label="Afficher les boutons"><svg width="34" height="34" viewBox="0 0 34 34" style="margin:auto"><path d="M7 21 L17 11 L27 21" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <section class="panel" id="panel">
@@ -291,6 +317,18 @@ body.compact .sub{display:none}
     </div>
     <p class="hint" id="act-hint"></p>
 
+    <h3>Annonces vocales</h3>
+    <div class="seg" id="seg-voice">
+      <button data-v="1">Activées</button>
+      <button data-v="0">Coupées</button>
+    </div>
+    <p class="hint">Montées, hors trace, points de passage, tous les 5 km et risque d’arriver de nuit. Monte le volume du téléphone.</p>
+    <button id="voice-test" style="width:100%">Tester la voix</button>
+
+    <h3>Météo</h3>
+    <div id="wx"><p class="hint">Ouverture du menu…</p></div>
+    <button id="wx-reload" style="width:100%;margin-top:8px">Actualiser la météo</button>
+
     <h3>Mes traces</h3>
     <div class="row">
       <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file2" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
@@ -304,6 +342,7 @@ body.compact .sub{display:none}
       <button id="rec-export">Exporter en GPX</button>
       <button id="rec-reset" class="danger">Nouvelle sortie</button>
     </div>
+    <button class="primary" id="rec-end" style="width:100%">Terminer la sortie</button>
 
     <h3>Fond de carte</h3>
     <div class="opts" id="layer-list"></div>
@@ -314,6 +353,11 @@ body.compact .sub{display:none}
       <button data-v="on">Afficher</button>
     </div>
     <p class="hint">Inclinaison du terrain à partir de 30°, du jaune au violet (IGN en France, swisstopo en Suisse). À utiliser pour le risque d’avalanche, avec le bulletin du jour.</p>
+    <h3>Bulletin d’avalanche</h3>
+    <div class="row">
+      <a class="filebtn" href="https://meteofrance.com/meteo-montagne" target="_blank" rel="noopener">France (Météo-France)</a>
+      <a class="filebtn" href="https://www.slf.ch/fr/" target="_blank" rel="noopener">Suisse (SLF)</a>
+    </div>
     </div>
 
     <h3>Couleur de la trace</h3>
@@ -378,6 +422,17 @@ body.compact .sub{display:none}
     <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file1" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
     <button class="link" id="nogpx">Continuer sans trace</button>
     <div class="err" id="err"></div>
+  </div>
+</div>
+
+<div class="welcome" id="summary" hidden>
+  <div class="card">
+    <h1>Sortie terminée</h1>
+    <div class="stats" id="sum-stats"></div>
+    <div class="row">
+      <button id="sum-export">Exporter en GPX</button>
+      <button class="primary" id="sum-close">Fermer</button>
+    </div>
   </div>
 </div>
 
@@ -446,7 +501,8 @@ overlays.forEach(o => o.l = L.tileLayer(o.url, {maxZoom:19, maxNativeZoom:o.maxN
 
 let layerIdx = +store.get('tvtt-layer', 0) % layers.length;
 let ovOn = act === 'ski' && store.get('tvtt-ov-ski', 'on') === 'on';
-const map = L.map('map', {zoomControl:false, attributionControl:true}).setView([45.67, 6.39], 11);
+const map = L.map('map', {zoomControl:false, attributionControl:false, rotate:true, touchRotate:false, rotateControl:false, bearing:0}).setView([45.67, 6.39], 11);
+L.control.attribution({position:'bottomleft'}).addTo(map);
 layers[layerIdx].l.addTo(map);
 const lay = () => layers[layerIdx];
 function applyOverlay(){ overlays.forEach(o => ovOn ? o.l.addTo(map) : map.removeLayer(o.l)); }
@@ -460,10 +516,10 @@ function visRect(){
 }
 function fitPad(){ const v = visRect(); return {paddingTopLeft:[v.l + 16, v.t + 16], paddingBottomRight:[innerWidth - v.r + 16, innerHeight - v.b + 16]}; }
 function showAt(ll, zoom){
-  const z = zoom ?? map.getZoom(), v = visRect();
-  const off = L.point((v.l + v.r) / 2 - innerWidth / 2, (v.t + v.b) / 2 - innerHeight / 2);
-  const c = map.unproject(map.project(ll, z).subtract(off), z);
-  if (zoom != null && zoom !== map.getZoom()) map.setView(c, z); else map.panTo(c, {animate:true, duration:.5});
+  if (zoom != null && zoom !== map.getZoom()) map.setView(ll, zoom, {animate:false});
+  const v = visRect(), P = L.point((v.l + v.r) / 2, (v.t + v.b) / 2), C = map.getSize().divideBy(2);
+  const pt = map.latLngToContainerPoint(ll);
+  map.panTo(map.containerPointToLatLng(C.add(pt.subtract(P))), {animate:true, duration:.5});
 }
 
 /* ---------- Trace ---------- */
@@ -602,12 +658,12 @@ function drawTrack(){
     const p = {lat:a.lat + (b.lat - a.lat) * ((d - T.cum[i]) / ((T.cum[i+1] - T.cum[i]) || 1)), lon:a.lon + (b.lon - a.lon) * ((d - T.cum[i]) / ((T.cum[i+1] - T.cum[i]) || 1))};
     const r = bearing(a, b);
     L.marker([p.lat, p.lon], {interactive:false, keyboard:false, icon:L.divIcon({className:'dir', iconSize:[16,16], iconAnchor:[8,8],
-      html:`<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(${r}deg)"><path d="M3 13 L8 2.5 L13 13 L8 10 Z" fill="#fff" stroke="#16181D" stroke-width="1.4" stroke-linejoin="round"/></svg>`})}).addTo(trackGroup);
+      html:`<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(calc(${r}deg + var(--mb,0deg)))"><path d="M3 13 L8 2.5 L13 13 L8 10 Z" fill="#fff" stroke="#16181D" stroke-width="1.4" stroke-linejoin="round"/></svg>`})}).addTo(trackGroup);
   }
 }
 
 function showTrack(fit){
-  lastIdx = null; alerted = new Set(); sess = null;
+  lastIdx = null; alerted = new Set(); sess = null; resetVoice();
   trackLine = L.polyline(T.pts.map(p => [p.lat, p.lon]));
   drawTrack();
   wptLayer.clearLayers();
@@ -795,6 +851,10 @@ function showClimb(){
   $('cp-k').textContent = ci.k;
   $('cp-v').innerHTML = `${fr(Math.round(ci.gain))}<small>m</small>`;
   $('cp-d').textContent = ci.d ? `sur ${km(ci.d)}, ${slopeTxt(ci.g)}` : 'jusqu’à l’arrivée';
+  const et = getEta(lastAlong);
+  $('cp-e').textContent = et.started ? `Arrivée ${hm(et.arr)}` : `Durée ${dur(et.remH)}`;
+  $('cp-e').className = 'e' + (et.started && et.late ? ' late' : et.started && et.soon ? ' soon' : '');
+  $('cp-s').textContent = et.ss ? `Coucher du soleil ${hm(et.ss)}` : '';
   const v = visRect();
   el.style.left = ((v.l + v.r) / 2) + 'px';
   el.style.top = ((Math.max(v.t, 0) + Math.min(v.b, innerHeight)) / 2) + 'px';
@@ -817,6 +877,20 @@ function climbLine(along){
     }
   }
   return 'Plus de montée notable jusqu’à l’arrivée';
+}
+function getEta(along){
+  const a = along ?? 0, i = idxAt(a);
+  const remH = modelHours(T.total - a, T.up - T.cumUp[i], T.down - T.cumDown[i]);
+  const ref = lastFix || T.pts[0], ss = sunset(new Date(), ref.lat, ref.lon);
+  let factor = 1;
+  if (sess && sess.moving > 600 && a - sess.along0 > 1000){
+    const i0 = idxAt(sess.along0);
+    const mh = modelHours(a - sess.along0, T.cumUp[i] - T.cumUp[i0], T.cumDown[i] - T.cumDown[i0]);
+    if (mh > 0.05) factor = clamp(sess.moving / 3600 / mh, 0.4, 2.5);
+  }
+  const arr = new Date(Date.now() + remH * factor * 3600000);
+  const late = !!(ss && arr > ss), soon = !!(ss && !late && arr > ss - 45 * 60000);
+  return {remH, ss, arr, late, soon, started: along != null && watchId != null};
 }
 function updateNav(along){
   if (!$('i-eta')) return;               // lignes retirées de l'affichage
@@ -852,10 +926,108 @@ function updateNav(along){
   $('i-wpt').textContent = nx ? `${nx.name || 'Point'} dans ${km(nx.along - a)}` : '';
 }
 
+/* ---------- Annonces vocales ---------- */
+let voiceOn = store.get('tvtt-voice', '1') === '1', frVoice = null, vs = null;
+function pickVoice(){ try { const v = speechSynthesis.getVoices(); frVoice = v.find(x => x.lang === 'fr-FR' && x.localService) || v.find(x => (x.lang || '').startsWith('fr')) || null; } catch(e){} }
+if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, force){
+  if (!('speechSynthesis' in window) || (!voiceOn && !force)) return;
+  try { const u = new SpeechSynthesisUtterance(text); u.lang = 'fr-FR'; if (frVoice) u.voice = frVoice; u.rate = 1; u.volume = 1; speechSynthesis.speak(u); } catch(e){}
+}
+const sDist = d => d < 1000 ? `${Math.max(50, Math.round(d / 50) * 50)} mètres` : `${fr(d / 1000, 1)} kilomètres`;
+const sSlope = g => A().unit === '°' ? `${Math.round(slopeVal(g))} degrés` : `${Math.round(Math.abs(g))} pour cent`;
+function resetVoice(){ vs = {ap:new Set(), half:new Set(), top:new Set(), wpt:new Set(), km:null, offT:0, late:false}; }
+resetVoice();
+function voiceEvents(n, off){
+  const a = n.along;
+  if (off){ if (!vs.offT || Date.now() - vs.offT > 60000){ say(`Hors trace, ${sDist(n.d)}`); vs.offT = Date.now(); } }
+  else if (vs.offT){ say('Retour sur la trace'); vs.offT = 0; }
+  if (off) return;
+  T.climbs.forEach((c, j) => {
+    const s0 = T.cum[c.i0], e0 = T.cum[c.i1], gain = T.pts[c.i1].ele - T.pts[c.i0].ele;
+    if (!vs.ap.has(j) && s0 - a <= 500 && s0 - a > 0){
+      vs.ap.add(j); say(`Montée dans ${sDist(s0 - a)} : ${Math.round(gain)} mètres de dénivelé sur ${sDist(e0 - s0)}, ${sSlope(gain / (e0 - s0) * 100)}`);
+    }
+    if (a >= s0 && a < e0){
+      vs.ap.add(j);
+      const rem = T.pts[c.i1].ele - eleAt(a);
+      if (!vs.top.has(j) && e0 - a < 150){ vs.top.add(j); vs.half.add(j); say('Fin de montée dans 150 mètres'); }
+      else if (!vs.half.has(j) && gain >= 80 && rem <= gain / 2){ vs.half.add(j); say(`Mi-montée, encore ${Math.round(rem)} mètres`); }
+    }
+  });
+  T.wptA.forEach(w => { const d = w.along - a; if (!vs.wpt.has(w) && d > 200 && d <= 1000){ vs.wpt.add(w); say(`${w.name || 'Point de passage'} dans ${sDist(d)}`); } });
+  const k = Math.floor(a / 5000);
+  if (vs.km == null) vs.km = k;
+  else if (k > vs.km){ vs.km = k; say(`${k * 5} kilomètres. Reste ${fr((T.total - a) / 1000, 1)} kilomètres`); }
+  if (!vs.late && sess && sess.moving > 600){ const et = getEta(a); if (et.late){ vs.late = true; say('Attention, arrivée prévue après le coucher du soleil'); } }
+}
+
+/* ---------- Orientation de la carte (sens de marche en haut) ---------- */
+let headUp = store.get('tvtt-headup', '0') === '1', compassHdg = null, gpsHdg = null, bearingCur = 0, lastApply = 0, orientOn = false;
+map.on('rotate', () => {
+  const b = map.getBearing();
+  document.documentElement.style.setProperty('--mb', b + 'deg');
+  $('needle').style.transform = `rotate(${b}deg)`;
+});
+function applyBearing(target, now){
+  const t = performance.now();
+  if (!now && t - lastApply < 120) return;
+  lastApply = t;
+  const d = ((target - bearingCur + 540) % 360) - 180;
+  if (Math.abs(d) < 2) return;
+  bearingCur = (bearingCur + d * (now ? 1 : 0.5) + 360) % 360;
+  map.setBearing(bearingCur);
+}
+function onOrient(e){
+  let h = e.webkitCompassHeading;
+  if (h == null && e.absolute && e.alpha != null) h = 360 - e.alpha;
+  if (h == null) return;
+  const ang = typeof window.orientation === 'number' ? window.orientation : (screen.orientation ? screen.orientation.angle : 0);
+  compassHdg = (h + ang + 360) % 360;
+  if (headUp && gpsHdg == null) applyBearing(-compassHdg);
+  updateArrow();
+}
+async function enableCompass(){
+  if (orientOn) return;
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission){
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== 'granted'){ toast('Boussole refusée : la carte tournera seulement en roulant', 4000); return; }
+    }
+    window.addEventListener('deviceorientation', onOrient, true); orientOn = true;
+  } catch(e){}
+}
+function setHeadUp(on){
+  headUp = on; store.set('tvtt-headup', on ? '1' : '0');
+  $('compass').classList.toggle('on', on);
+  if (on){ enableCompass(); toast('Carte orientée dans ton sens de marche'); }
+  else { bearingCur = 0; map.setBearing(0); toast('Carte nord en haut'); }
+}
+$('compass').addEventListener('click', () => setHeadUp(!headUp));
+function updateArrow(){
+  const arrow = meMarker && meMarker.getElement() && meMarker.getElement().querySelector('.me-arrow');
+  if (!arrow) return;
+  const h = gpsHdg ?? compassHdg;
+  if (h == null){ arrow.style.display = 'none'; return; }
+  arrow.style.display = 'block'; arrow.style.transform = `rotate(calc(${h}deg + var(--mb,0deg)))`;
+}
+
+/* ---------- Retour sur la trace ---------- */
+let rejoinLine = null;
+function showRejoin(here, n, off){
+  if (!rejoinLine) rejoinLine = L.polyline([], {color:'#B3261E', weight:6, dashArray:'2 12', lineCap:'round', interactive:false}).addTo(map);
+  if (!off){ rejoinLine.setLatLngs([]); return null; }
+  const p = T.pts[n.i], q = T.pts[Math.min(n.i + 1, T.pts.length - 1)];
+  const proj = {lat:p.lat + n.t * (q.lat - p.lat), lon:p.lon + n.t * (q.lon - p.lon)};
+  rejoinLine.setLatLngs([[here.lat, here.lon], [proj.lat, proj.lon]]);
+  return bearing(here, proj);
+}
+
 /* ---------- Enregistrement de la sortie ---------- */
 const newRide = () => ({start:Date.now(), pts:[], dist:0, up:0, moving:0, ref:null});
 let ride; try { ride = JSON.parse(store.get('tvtt-ride', 'null')) || newRide(); } catch(e){ ride = newRide(); }
 const saveRide = () => store.set('tvtt-ride', JSON.stringify(ride));
+const rideLine = L.polyline(ride.pts.map(p => [p.lat, p.lon]), {color:'#0B3D91', weight:3, opacity:.75, interactive:false}).addTo(map);
 function rideAdd(c, t){
   if (c.accuracy > 35) return;
   const p = {lat:+c.latitude.toFixed(6), lon:+c.longitude.toFixed(6), ele:(c.altitude != null && !isNaN(c.altitude)) ? Math.round(c.altitude * 10) / 10 : null, t};
@@ -870,7 +1042,7 @@ function rideAdd(c, t){
     if (ride.ref == null) ride.ref = p.ele;
     else { const dd = p.ele - ride.ref; if (dd > 5){ ride.up += dd; ride.ref = p.ele; } else if (dd < -5) ride.ref = p.ele; }
   }
-  ride.pts.push(p);
+  ride.pts.push(p); rideLine.addLatLng([p.lat, p.lon]);
   if (ride.pts.length % 10 === 0) saveRide();
 }
 function renderRide(){
@@ -886,7 +1058,7 @@ function rideGPX(){
   ride.pts.forEach(p => { s += `<trkpt lat="${p.lat}" lon="${p.lon}">${p.ele != null ? `<ele>${p.ele}</ele>` : ''}<time>${new Date(p.t).toISOString()}</time></trkpt>\n`; });
   return s + '</trkseg></trk>\n</gpx>\n';
 }
-$('rec-export').addEventListener('click', async () => {
+async function exportRide(){
   saveRide();
   const fname = `sortie-${new Date(ride.start).toISOString().slice(0, 10)}.gpx`;
   const file = new File([rideGPX()], fname, {type:'application/gpx+xml'});
@@ -895,10 +1067,11 @@ $('rec-export').addEventListener('click', async () => {
   }
   const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = fname;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-});
+}
+$('rec-export').addEventListener('click', exportRide);
 $('rec-reset').addEventListener('click', () => {
   if (ride.pts.length > 1 && !confirm('Effacer la sortie enregistrée et repartir de zéro ? Pense à l’exporter avant.')) return;
-  ride = newRide(); saveRide(); vmax = 0; $('vmax').textContent = '0'; renderRide();
+  ride = newRide(); saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0'; renderRide();
 });
 
 /* ---------- GPS ---------- */
@@ -912,6 +1085,8 @@ function start(){
   try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch(e){}
   follow = true; $('center').classList.remove('hot');
   sess = null;
+  say('Suivi démarré');
+  if (headUp) enableCompass();
 }
 function stop(){
   if (watchId != null) navigator.geolocation.clearWatch(watchId);
@@ -954,11 +1129,9 @@ function onPos(p){
     accCircle = L.circle(ll, {radius:c.accuracy, weight:1, color:'#16181D', fillOpacity:.07, interactive:false}).addTo(map);
     showAt(ll, Math.max(map.getZoom(), 15));
   } else { meMarker.setLatLng(ll); accCircle.setLatLng(ll).setRadius(c.accuracy); }
-  const arrow = meMarker.getElement() && meMarker.getElement().querySelector('.me-arrow');
-  if (arrow){
-    if (c.heading != null && !isNaN(c.heading) && spdS > 1){ arrow.style.display = 'block'; arrow.style.transform = `rotate(${c.heading}deg)`; }
-    else arrow.style.display = 'none';
-  }
+  gpsHdg = (c.heading != null && !isNaN(c.heading) && spdS > 1.5) ? c.heading : null;
+  if (headUp && gpsHdg != null) applyBearing(-gpsHdg, true);
+  updateArrow();
   if (follow) showAt(ll);
 
   let traceEle = null;
@@ -972,14 +1145,18 @@ function onPos(p){
     $('rest').textContent = fr(Math.max(0, T.total - n.along) / 1000, 1);
     $('uprest').textContent = T.hasEle ? fr(Math.max(0, Math.round(T.up - T.cumUp[i]))) : '–';
     const off = n.d > Math.max(40, c.accuracy * 1.5);
-    $('offtrack').textContent = `Hors trace, ${fr(Math.round(n.d))} m`;
+    if (n.d < 60) ride.maxAlong = Math.max(ride.maxAlong || 0, n.along);
+    ride.trackId = trackRec ? trackRec.id : null; ride.vmax = vmax;
+    const brg = showRejoin(here, n, off);
+    $('offtrack').innerHTML = off ? `<svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(calc(${brg}deg + var(--mb,0deg)))"><path d="M15 2 L26 26 L15 19 L4 26 Z" fill="#fff"/></svg>Trace à ${fr(Math.round(n.d))} m` : '';
     $('offtrack').classList.toggle('on', off);
+    voiceEvents(n, off);
     if (off && !offState) beep();
     offState = off;
     drawProfile(n.along);
     // Alerte à l'approche des points du GPX
     T.wpts.forEach(w => {
-      if (!alerted.has(w) && hav(here, w) < 100){ alerted.add(w); toast(`À proximité : ${w.name || 'point de la trace'}`, 4000); beep(); }
+      if (!alerted.has(w) && hav(here, w) < 100){ alerted.add(w); toast(`À proximité : ${w.name || 'point de la trace'}`, 4000); beep(); say(w.name || 'Point de passage'); }
     });
   }
   updateNav(T ? lastAlong : null);
@@ -1077,6 +1254,7 @@ function onSeg(id, fn){ $(id).addEventListener('click', e => { const b = e.targe
 
 function renderMenu(){
   renderSOS(); refreshFix();
+  seg('seg-voice', voiceOn ? 1 : 0); loadWeather(false);
   seg('seg-act', act); $('act-hint').textContent = A().hint;
   renderLib(); $('rev').disabled = !trackRec;
   renderRide();
@@ -1114,10 +1292,78 @@ onSeg('seg-ov', v => { ovOn = v === 'on'; store.set('tvtt-ov-ski', v); applyOver
 onSeg('seg-color', v => { colorMode = v; store.set('tvtt-color', v); drawTrack(); drawProfile(lastAlong); renderMenu(); });
 onSeg('seg-big', v => { document.body.classList.toggle('big', v === '1'); store.set('tvtt-big', v); layout(); renderMenu(); });
 onSeg('seg-sun', v => { document.body.classList.toggle('sun', v === '1'); store.set('tvtt-sun', v); drawTrack(); layout(); renderMenu(); });
+onSeg('seg-voice', v => { voiceOn = v === '1'; store.set('tvtt-voice', v); renderMenu(); if (voiceOn) say('Annonces vocales activées'); });
+$('voice-test').addEventListener('click', () => say('Montée dans 500 mètres : 300 mètres de dénivelé sur 2 kilomètres', true));
+$('wx-reload').addEventListener('click', () => loadWeather(true));
+$('rec-end').addEventListener('click', endRide);
+$('sum-export').addEventListener('click', exportRide);
+$('sum-close').addEventListener('click', () => { $('summary').hidden = true; });
 onSeg('seg-trans', v => { document.body.classList.toggle('trans', v === '1'); store.set('tvtt-trans', v); renderMenu(); });
 onSeg('seg-compact', v => { document.body.classList.toggle('compact', v === '1'); store.set('tvtt-compact', v); layout(); renderMenu(); });
 onSeg('seg-zone', v => { dlZone = v; renderOffline(); });
 onSeg('seg-detail', v => { dlDetail = v; renderOffline(); });
+
+/* ---------- Résumé de fin de sortie ---------- */
+function endRide(){
+  if (watchId != null) stop();
+  saveRide();
+  if (ride.pts.length < 2){ toast('Aucune sortie enregistrée pour l’instant'); return; }
+  const tot = (ride.pts[ride.pts.length - 1].t - ride.pts[0].t) / 3600000;
+  const avg = ride.moving > 60 ? ride.dist / ride.moving * 3.6 : 0;
+  const cells = [
+    ['Distance', fr(ride.dist / 1000, 1), 'km'], ['Dénivelé +', fr(Math.round(ride.up)), 'm'],
+    ['Durée totale', dur(tot), ''], ['En mouvement', dur(ride.moving / 3600), ''],
+    ['Moyenne', fr(avg, 1), 'km/h'], ['Vitesse max', fr(ride.vmax || vmax), 'km/h']
+  ];
+  if (T && ride.trackId && trackRec && ride.trackId === trackRec.id) cells.push(['Trace suivie', fr(Math.min(100, Math.round((ride.maxAlong || 0) / T.total * 100))), '%']);
+  $('sum-stats').innerHTML = cells.map(c => `<div><span>${c[0]}</span><b>${c[1]}<small>${c[2]}</small></b></div>`).join('');
+  $('sheet').hidden = true; $('summary').hidden = false;
+  const b = rideLine.getBounds(); if (trackLine) b.extend(trackLine.getBounds());
+  if (b.isValid()){ follow = false; map.fitBounds(b, fitPad()); }
+  say(`Sortie terminée. ${fr(ride.dist / 1000, 1)} kilomètres, ${Math.round(ride.up)} mètres de dénivelé.`);
+}
+
+/* ---------- Météo (Open-Meteo) ---------- */
+let wx = {t:0, key:'', data:null, pts:null};
+async function loadWeather(force){
+  const box = $('wx');
+  let pts = [];
+  if (T){
+    const s0 = T.pts[0]; let hi = s0; for (const p of T.pts) if (p.ele > hi.ele) hi = p;
+    pts.push({lat:s0.lat, lon:s0.lon, ele:T.hasEle ? s0.ele : null, label:'départ'});
+    if (T.hasEle && hi.ele - s0.ele > 150) pts.push({lat:hi.lat, lon:hi.lon, ele:hi.ele, label:'sommet'});
+  } else if (lastFix) pts.push({lat:lastFix.lat, lon:lastFix.lon, ele:null, label:'ici'});
+  if (!pts.length){ box.innerHTML = '<p class="hint">Charge une trace ou lance le suivi pour voir la météo.</p>'; return; }
+  const key = pts.map(p => p.lat.toFixed(2) + ',' + p.lon.toFixed(2)).join('|');
+  if (!force && wx.data && wx.key === key && Date.now() - wx.t < 30 * 60000){ renderWx(); return; }
+  box.innerHTML = '<p class="hint">Chargement de la météo…</p>';
+  let url = 'https://api.open-meteo.com/v1/forecast?latitude=' + pts.map(p => p.lat.toFixed(4)).join(',') + '&longitude=' + pts.map(p => p.lon.toFixed(4)).join(',')
+    + '&hourly=temperature_2m,precipitation_probability,wind_speed_10m,wind_gusts_10m,freezing_level_height&timezone=auto&forecast_days=2';
+  if (pts.every(p => p.ele != null && isFinite(p.ele))) url += '&elevation=' + pts.map(p => Math.round(p.ele)).join(',');
+  try {
+    const r = await fetch(url); if (!r.ok) throw new Error();
+    let j = await r.json(); if (!Array.isArray(j)) j = [j];
+    wx = {t:Date.now(), key, data:j, pts}; renderWx();
+  } catch(e){ box.innerHTML = '<p class="hint">Météo indisponible, pas de réseau ?</p>'; }
+}
+function renderWx(){
+  const j = wx.data, pts = wx.pts, h0 = j[0].hourly, ski = act === 'ski';
+  const nowLoc = new Date(Date.now() + (j[0].utc_offset_seconds || 0) * 1000).toISOString().slice(0, 13);
+  let i0 = h0.time.findIndex(t => t.slice(0, 13) >= nowLoc); if (i0 < 0) i0 = 0;
+  const two = pts.length > 1;
+  let rows = '';
+  for (let k = 0; k < 7; k++){
+    const i = i0 + k * 2; if (i >= h0.time.length) break;
+    const t1 = Math.round(h0.temperature_2m[i]), t2 = two ? Math.round(j[1].hourly.temperature_2m[i]) : null;
+    const pr = h0.precipitation_probability[i] ?? 0;
+    const wsrc = two ? j[1].hourly : h0, ws = Math.round(wsrc.wind_speed_10m[i]), wg = Math.round(wsrc.wind_gusts_10m[i]);
+    const iso = h0.freezing_level_height[i];
+    rows += `<tr><td>${+h0.time[i].slice(11, 13)} h</td><td>${t1}°${two ? ` / ${t2}°` : ''}</td><td class="${pr >= 50 ? 'hot' : ''}">${pr} %</td><td class="${wg >= 60 ? 'hot' : ''}">${ws} (${wg})</td>${ski ? `<td>${iso != null ? Math.round(iso / 100) * 100 + ' m' : '–'}</td>` : ''}</tr>`;
+  }
+  const legend = two ? `Températures au départ (${fr(Math.round(pts[0].ele))} m) et au sommet (${fr(Math.round(pts[1].ele))} m), vent au sommet en km/h (rafales).`
+    : 'Vent en km/h (rafales).';
+  $('wx').innerHTML = `<table class="wx"><tr><th>Heure</th><th>Temp.</th><th>Pluie</th><th>Vent</th>${ski ? '<th>Iso 0°</th>' : ''}</tr>${rows}</table><p class="hint" style="margin-top:6px">${legend} Source Open-Meteo, mise à jour à ${hm(new Date(wx.t))}.</p>`;
+}
 
 /* ---------- Cartes hors ligne ---------- */
 function renderOffline(){
@@ -1281,6 +1527,7 @@ document.body.classList.toggle('sun', store.get('tvtt-sun', '0') === '1');
 document.body.classList.toggle('nopanel', store.get('tvtt-panel', '1') === '0');
 document.body.classList.toggle('compact', store.get('tvtt-compact', '0') === '1');
 document.body.classList.toggle('trans', store.get('tvtt-trans', '1') === '1');
+$('compass').classList.toggle('on', headUp);
 const profOn = store.get('tvtt-prof', '1') !== '0';
 document.body.classList.toggle('noprof', !profOn); $('prof').setAttribute('aria-pressed', profOn);
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
