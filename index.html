@@ -62,7 +62,31 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var
 .ptitle .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle .meta{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 #profile{width:100%;height:96px;display:block}
-.btns{display:grid;grid-template-columns:1fr 1.4fr 1fr 1fr;gap:8px;margin-top:8px}
+.btns{display:grid;grid-template-columns:1fr 1.35fr 1fr 1fr 1fr;gap:6px;margin-top:8px}
+.btns button,.btns .filebtn{font-size:14px;padding:0 4px}
+button[aria-pressed=true].tog{border-color:var(--ink)}
+body.noprof .ptitle,body.noprof #profile{display:none}
+body.noprof .btns{margin-top:0}
+
+/* Paysage (iPhone sur le guidon) : chiffres à gauche, carte à droite */
+@media (orientation: landscape) and (max-height: 540px){
+  .hud{top:calc(env(safe-area-inset-top,0px) + 6px);left:calc(env(safe-area-inset-left,0px) + 6px);right:auto;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 6px);width:230px;padding:8px 12px;
+    grid-template-columns:1fr 1fr;grid-template-areas:"spd spd" "alt rest" "sub sub";grid-template-rows:auto auto 1fr;align-content:start}
+  #s-spd{border-right:none;border-bottom:1px solid var(--line);padding:0 0 4px;margin-bottom:6px}
+  #s-spd .val{font-size:72px}
+  #s-alt{padding-bottom:0}
+  #s-alt .val,#s-rest .val{font-size:34px}
+  .sub{flex-direction:column;justify-content:flex-start;gap:3px;margin-top:8px;padding-top:6px;font-size:13px}
+  .sub span{display:flex;justify-content:space-between;align-items:baseline}
+  .panel{left:calc(env(safe-area-inset-left,0px) + 244px);right:calc(env(safe-area-inset-right,0px) + 6px);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 6px);padding:6px 8px}
+  #profile{height:62px}
+  .ptitle{padding-bottom:2px;font-size:12px}
+  .btns{margin-top:6px}
+  .btns button,.btns .filebtn{min-height:40px}
+  .offtrack{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(50% + 122px)}
+}
 button,.filebtn{font:600 15px var(--txt);color:var(--ink);background:transparent;border:1px solid var(--line);
   border-radius:12px;min-height:46px;padding:0 8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 button:focus-visible,.filebtn:focus-within{outline:3px solid var(--vis);outline-offset:2px}
@@ -88,12 +112,14 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
 /* Marqueur position */
 .me{background:none;border:none}
 .me-dot{width:28px;height:28px;position:relative}
-.me-dot::before{content:"";position:absolute;inset:6px;border-radius:50%;background:var(--vis);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.me-dot::before{content:"";position:absolute;inset:6px;border-radius:50%;background:#16181D;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .me-arrow{position:absolute;inset:0;display:none}
 .me-arrow::before{content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
-  border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid var(--vis)}
+  border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:11px solid #16181D}
 .wpt{background:none;border:none}
 .wpt div{width:12px;height:12px;border-radius:2px;background:#fff;border:3px solid var(--track);transform:rotate(45deg)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:2px 0 4px}
+.legend i{display:inline-block;width:18px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle}
 /* Panneau Cartes */
 .sheet{position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.3);display:flex;align-items:flex-end}
 .sheet[hidden]{display:none}
@@ -144,6 +170,7 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
     <label class="filebtn">GPX<input type="file" id="file2" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
     <button class="primary" id="go">Démarrer</button>
     <button id="center">Centrer</button>
+    <button id="prof" class="tog">Profil</button>
     <button id="maps">Cartes</button>
   </div>
 </section>
@@ -153,6 +180,12 @@ input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events
     <div class="sheet-head"><h2 id="sheet-t">Cartes</h2><button id="sheet-close">Fermer</button></div>
     <h3>Fond de carte</h3>
     <div class="opts" id="layer-list"></div>
+    <h3>Couleur de la trace</h3>
+    <div class="seg" id="seg-color">
+      <button data-v="slope" aria-pressed="true">Selon la pente</button>
+      <button data-v="plain" aria-pressed="false">Unie</button>
+    </div>
+    <div class="legend" id="legend"></div>
     <h3>Télécharger pour le hors ligne</h3>
     <p class="hint" id="dl-hint"></p>
     <div class="seg" id="seg-zone">
@@ -206,9 +239,53 @@ layers.forEach(d => d.l = L.tileLayer(d.url, {maxZoom:d.maxZoom, subdomains:d.su
 let layerIdx = 0;
 try { layerIdx = +(localStorage.getItem('tvtt-layer') || 0) % layers.length; } catch(e){}
 const map = L.map('map', {zoomControl:false, attributionControl:true}).setView([45.67, 6.39], 11);
+const isLand = () => matchMedia('(orientation: landscape) and (max-height: 540px)').matches;
+function visRect(){
+  const W = innerWidth, H = innerHeight, hud = document.querySelector('.hud').getBoundingClientRect(), pan = $('panel').getBoundingClientRect();
+  return isLand() ? {l:hud.right + 8, t:0, r:W, b:pan.top - 4} : {l:0, t:hud.bottom + 8, r:W, b:pan.top - 4};
+}
+function fitPad(){ const v = visRect(); return {paddingTopLeft:[v.l + 16, v.t + 16], paddingBottomRight:[innerWidth - v.r + 16, innerHeight - v.b + 16]}; }
+function showAt(ll, zoom){
+  const z = zoom ?? map.getZoom(), v = visRect();
+  const off = L.point((v.l + v.r) / 2 - innerWidth / 2, (v.t + v.b) / 2 - innerHeight / 2);
+  const c = map.unproject(map.project(ll, z).subtract(off), z);
+  if (zoom != null && zoom !== map.getZoom()) map.setView(c, z); else map.panTo(c, {animate:true, duration:.5});
+}
 layers[layerIdx].l.addTo(map);
 
-let trackLine = null, wptLayer = L.layerGroup().addTo(map);
+let trackLine = null, trackGroup = L.layerGroup().addTo(map), wptLayer = L.layerGroup().addTo(map);
+// Classes de pente (valeur absolue, montée comme descente)
+const SLOPES = [
+  {max:5,  color:'#2E9E4F', label:'moins de 5 %'},
+  {max:8,  color:'#1F6FD1', label:'5 à 8 %'},
+  {max:12, color:'#F08A00', label:'8 à 12 %'},
+  {max:Infinity, color:'#D7261E', label:'12 % et plus'}
+];
+const slopeClass = g => SLOPES.findIndex(c => Math.abs(g) < c.max);
+let colorMode = 'slope';
+try { colorMode = localStorage.getItem('tvtt-color') || 'slope'; } catch(e){}
+function drawTrack(){
+  trackGroup.clearLayers();
+  if (!T) return;
+  const ll = T.pts.map(p => [p.lat, p.lon]);
+  L.polyline(ll, {color:'#fff', weight:9, opacity:.85, interactive:false}).addTo(trackGroup);
+  if (colorMode !== 'slope' || !T.hasEle){
+    L.polyline(ll, {color:getComputedStyle(document.documentElement).getPropertyValue('--track').trim(), weight:5, opacity:.95, interactive:false}).addTo(trackGroup);
+    return;
+  }
+  let start = 0, cls = slopeClass(T.grade[0]);
+  for (let i = 1; i < T.pts.length; i++){
+    const c = i < T.pts.length - 1 ? slopeClass(T.grade[i]) : -1;
+    if (c !== cls){
+      L.polyline(ll.slice(start, i + 1), {color:SLOPES[cls].color, weight:5, opacity:1, lineCap:'butt', interactive:false}).addTo(trackGroup);
+      start = i; cls = c;
+    }
+  }
+}
+function renderLegend(){
+  $('legend').innerHTML = colorMode === 'slope' ? SLOPES.map(c => `<span><i style="background:${c.color}"></i>${c.label}</span>`).join('') : '';
+  $('seg-color').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === colorMode));
+}
 let meMarker = null, accCircle = null, follow = true;
 
 /* ---------- Trace ---------- */
@@ -244,7 +321,17 @@ function parseGPX(text){
     cumUp.push(up);
   }
   const eles = pts.map(p => p.ele);
-  return {pts, wpts, cum, cumUp, total:cum[cum.length-1], up, down, hasEle,
+  const grade = new Array(pts.length).fill(0);
+  if (hasEle){
+    let a = 0, b = 0;
+    for (let i = 0; i < pts.length; i++){
+      while (a < i && cum[i] - cum[a] > 50) a++;
+      while (b < pts.length - 1 && cum[b] - cum[i] < 50) b++;
+      const dd = cum[b] - cum[a];
+      grade[i] = dd > 15 ? (pts[b].ele - pts[a].ele) / dd * 100 : 0;
+    }
+  }
+  return {pts, wpts, cum, cumUp, grade, total:cum[cum.length-1], up, down, hasEle,
     minE:Math.min(...eles), maxE:Math.max(...eles), name:(nameEl && nameEl.textContent.trim()) || ''};
 }
 
@@ -252,15 +339,15 @@ function loadTrack(text, fileName, fit = true){
   T = parseGPX(text);
   if (!T.name) T.name = (fileName || 'Trace').replace(/\.gpx$/i, '');
   lastIdx = null;
-  if (trackLine) map.removeLayer(trackLine);
   const css = getComputedStyle(document.documentElement);
-  trackLine = L.polyline(T.pts.map(p => [p.lat, p.lon]), {color:css.getPropertyValue('--track').trim(), weight:5, opacity:.9}).addTo(map);
+  trackLine = L.polyline(T.pts.map(p => [p.lat, p.lon]));
+  drawTrack();
   wptLayer.clearLayers();
   T.wpts.forEach(w => L.marker([w.lat, w.lon], {icon:L.divIcon({className:'wpt', html:'<div></div>', iconSize:[12,12]})})
     .bindTooltip(w.name || 'Point', {direction:'top'}).addTo(wptLayer));
   const s = T.pts[0];
   L.circleMarker([s.lat, s.lon], {radius:6, color:'#fff', weight:2, fillColor:'#2E7D32', fillOpacity:1}).addTo(wptLayer).bindTooltip('Départ');
-  if (fit) map.fitBounds(trackLine.getBounds(), {paddingTopLeft:[20, 190], paddingBottomRight:[20, panelH() + 20]});
+  if (fit) map.fitBounds(trackLine.getBounds(), fitPad());
   $('tname').textContent = T.name;
   $('tmeta').textContent = `${fr(T.total/1000, 1)} km, D+ ${fr(Math.round(T.up))} m`;
   $('rest').textContent = fr(T.total/1000, 1);
@@ -330,14 +417,26 @@ function drawProfile(along){
   line.lineTo(X(T.total), Y(T.pts[T.pts.length-1].ele));
   const area = new Path2D(line);
   area.lineTo(X(T.total), padT + h); area.lineTo(X(0), padT + h); area.closePath();
-  ctx.fillStyle = col('--relief-soft'); ctx.fill(area);
-  ctx.strokeStyle = col('--relief'); ctx.lineWidth = 1.6; ctx.stroke(line);
-  // parcouru en couleur trace
+  if (colorMode === 'slope'){
+    // une bande verticale par pas de 1 px, couleur de la pente
+    ctx.save(); ctx.clip(area);
+    let i = 0;
+    for (let x = padL; x < padL + w; x++){
+      const d = (x - padL) / w * T.total;
+      while (i < T.cum.length - 2 && T.cum[i+1] < d) i++;
+      ctx.fillStyle = SLOPES[slopeClass(T.grade[i])].color;
+      ctx.globalAlpha = .55; ctx.fillRect(x, padT, 1.2, h);
+    }
+    ctx.restore();
+    ctx.strokeStyle = col('--ink'); ctx.globalAlpha = .55; ctx.lineWidth = 1.2; ctx.stroke(line); ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = col('--relief-soft'); ctx.fill(area);
+    ctx.strokeStyle = col('--relief'); ctx.lineWidth = 1.6; ctx.stroke(line);
+  }
+  // partie déjà parcourue estompée
   if (along != null){
-    ctx.save(); ctx.beginPath(); ctx.rect(padL, 0, X(along) - padL, H); ctx.clip();
-    ctx.beginPath(); ctx.moveTo(X(0), Y(T.pts[0].ele));
-    for (let i = step; i < T.pts.length; i += step) ctx.lineTo(X(T.cum[i]), Y(T.pts[i].ele));
-    ctx.strokeStyle = col('--track'); ctx.lineWidth = 2.4; ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = col('--paper');
+    ctx.fillRect(padL, padT, X(along) - padL, h); ctx.restore();
   }
   // échelles
   ctx.fillStyle = col('--muted'); ctx.textBaseline = 'middle';
@@ -347,8 +446,8 @@ function drawProfile(along){
   const end = fr(T.total/1000, 1) + ' km'; ctx.fillText(end, W - 4 - ctx.measureText(end).width, H - 2);
   if (along != null){
     const e = nearestEleAt(along), x = X(along), y = Y(e);
-    ctx.strokeStyle = col('--vis'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + h); ctx.stroke();
-    ctx.fillStyle = col('--vis'); ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
+    ctx.strokeStyle = col('--ink'); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + h); ctx.stroke();
+    ctx.fillStyle = '#16181D'; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
   }
 }
@@ -409,15 +508,15 @@ function onPos(p){
   const ll = [here.lat, here.lon];
   if (!meMarker){
     meMarker = L.marker(ll, {icon:L.divIcon({className:'me', html:'<div class="me-dot"><div class="me-arrow"></div></div>', iconSize:[28,28], iconAnchor:[14,14]}), zIndexOffset:1000}).addTo(map);
-    accCircle = L.circle(ll, {radius:c.accuracy, weight:1, color:'#F0561D', fillOpacity:.08, interactive:false}).addTo(map);
-    map.setView(ll, Math.max(map.getZoom(), 15));
+    accCircle = L.circle(ll, {radius:c.accuracy, weight:1, color:'#16181D', fillOpacity:.07, interactive:false}).addTo(map);
+    showAt(L.latLng(ll), Math.max(map.getZoom(), 15));
   } else { meMarker.setLatLng(ll); accCircle.setLatLng(ll).setRadius(c.accuracy); }
   const arrow = meMarker.getElement() && meMarker.getElement().querySelector('.me-arrow');
   if (arrow){
     if (c.heading != null && !isNaN(c.heading) && spdS > 1){ arrow.style.display = 'block'; arrow.style.transform = `rotate(${c.heading}deg)`; }
     else arrow.style.display = 'none';
   }
-  if (follow) map.panTo(ll, {animate:true, duration:.5});
+  if (follow) showAt(L.latLng(ll));
 
   // Trace
   let traceEle = null;
@@ -461,8 +560,8 @@ function beep(){
 map.on('dragstart', () => { follow = false; $('center').classList.add('hot'); });
 $('center').addEventListener('click', () => {
   follow = true; $('center').classList.remove('hot');
-  if (meMarker) map.setView(meMarker.getLatLng(), Math.max(map.getZoom(), 15));
-  else if (trackLine) map.fitBounds(trackLine.getBounds(), {paddingTopLeft:[20,190], paddingBottomRight:[20, panelH()+20]});
+  if (meMarker) showAt(meMarker.getLatLng(), Math.max(map.getZoom(), 15));
+  else if (trackLine) map.fitBounds(trackLine.getBounds(), fitPad());
 });
 /* ---------- Cartes : fond et hors ligne ---------- */
 const TILE_CACHE = 'tvtt-tiles', MAX_TILES = 15000;
@@ -610,7 +709,13 @@ function applyOfflineZoom(){
 window.addEventListener('online', () => { applyOfflineZoom(); toast('Réseau retrouvé'); });
 window.addEventListener('offline', () => { applyOfflineZoom(); toast('Hors réseau : cartes enregistrées'); });
 
-$('maps').addEventListener('click', () => { $('sheet').hidden = false; renderSheet(); });
+$('maps').addEventListener('click', () => { $('sheet').hidden = false; renderSheet(); renderLegend(); });
+$('seg-color').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  colorMode = b.dataset.v;
+  try { localStorage.setItem('tvtt-color', colorMode); } catch(err){}
+  renderLegend(); drawTrack(); drawProfile(lastAlong);
+});
 $('sheet-close').addEventListener('click', () => { $('sheet').hidden = true; });
 $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) $('sheet').hidden = true; });
 
@@ -623,12 +728,22 @@ function toast(msg, ms = 1800){
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms);
 }
 function panelH(){ return $('panel').offsetHeight + 16; }
+function setProfile(on){
+  document.body.classList.toggle('noprof', !on);
+  $('prof').setAttribute('aria-pressed', on);
+  try { localStorage.setItem('tvtt-prof', on ? '1' : '0'); } catch(e){}
+  layout();
+}
+$('prof').addEventListener('click', () => setProfile(document.body.classList.contains('noprof')));
+let profOn = true; try { profOn = localStorage.getItem('tvtt-prof') !== '0'; } catch(e){}
+document.body.classList.toggle('noprof', !profOn); $('prof').setAttribute('aria-pressed', profOn);
+window.addEventListener('orientationchange', () => setTimeout(() => { layout(); map.invalidateSize(); if (follow && meMarker) showAt(meMarker.getLatLng()); }, 300));
 function layout(){
   document.documentElement.style.setProperty('--panel-h', panelH() + 'px');
   drawProfile(lastAlong);
 }
 window.addEventListener('resize', layout);
-matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (trackLine) trackLine.setStyle({color:getComputedStyle(document.documentElement).getPropertyValue('--track').trim()}); layout(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { drawTrack(); layout(); });
 
 /* Dernière trace utilisée */
 try {
