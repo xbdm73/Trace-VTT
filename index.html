@@ -6,11 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Trace VTT">
+<meta name="apple-mobile-web-app-title" content="Traces">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="favicon.png">
 <meta name="theme-color" content="#F3F5F2">
-<title>Trace VTT</title>
+<title>Traces</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
@@ -422,7 +422,7 @@ body.compact .sub{display:none}
 
 <div class="welcome" id="actpick">
   <div class="card">
-    <h1>Trace VTT</h1>
+    <h1>Traces</h1>
     <p>Quelle activité aujourd’hui ?</p>
     <div class="acts">
       <button class="actbtn" data-v="vtt"><b>VTT</b><small>Pente de la trace en %, vitesse</small></button>
@@ -435,7 +435,7 @@ body.compact .sub{display:none}
 
 <div class="welcome" id="welcome" hidden>
   <div class="card">
-    <h1>Trace VTT</h1>
+    <h1>Traces</h1>
     <p>Charge un fichier GPX depuis Fichiers, iCloud Drive ou un mail. La trace s’affiche avec son profil, puis lance le suivi pour voir ta vitesse et ton altitude.</p>
     <label class="filebtn primary">Ouvrir un GPX<input type="file" id="file1" accept=".gpx,application/gpx+xml,application/xml,text/xml"></label>
     <button class="link" id="nogpx">Enregistrer sans trace</button>
@@ -1263,7 +1263,7 @@ function renderRide(){
 }
 function rideGPX(){
   const name = `Sortie du ${new Date(ride.start).toLocaleDateString('fr-FR')}`;
-  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Trace VTT" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>${esc(name)}</name><trkseg>\n`;
+  let s = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Traces" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>${esc(name)}</name><trkseg>\n`;
   ride.pts.forEach(p => { s += `<trkpt lat="${p.lat}" lon="${p.lon}">${p.ele != null ? `<ele>${p.ele}</ele>` : ''}<time>${new Date(p.t).toISOString()}</time></trkpt>\n`; });
   return s + '</trkseg></trk>\n</gpx>\n';
 }
