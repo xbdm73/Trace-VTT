@@ -129,6 +129,7 @@ body.big .sheet button,body.big .sheet .filebtn{min-height:64px;font-size:21px}
 .card .link{margin-top:10px;width:100%;border:none;color:var(--muted);font-weight:400;text-decoration:underline;min-height:40px}
 .err{color:var(--warn);font-size:19px;margin-top:10px;min-height:1em}
 #actpick{z-index:1600;background:var(--paper)}
+#help{z-index:1700}
 .acts{display:grid;gap:10px}
 .actbtn{flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:72px;padding:10px 16px;text-align:left;border-width:2px}
 .actbtn b{font-family:var(--num);font-size:34px;line-height:1}
@@ -252,6 +253,20 @@ body.big .compass{width:72px;height:72px}
 .wx th{font-family:var(--txt);font-size:15px;color:var(--muted);font-weight:600;text-align:left;padding:2px 4px 4px}
 .wx td{padding:5px 4px;border-top:1px solid var(--line);white-space:nowrap}
 .wx .hot{color:var(--warn);font-weight:700}
+/* Mode d'emploi */
+#help .sheet-card{max-height:100vh;height:100%;border-radius:0}
+.help{font-size:20px;line-height:1.5}
+.help details{border-top:1px solid var(--line)}
+.help summary{font-size:22px;font-weight:700;padding:14px 4px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.help summary::-webkit-details-marker{display:none}
+.help summary::after{content:"+";font-size:30px;font-weight:400;color:var(--vis)}
+.help details[open] summary::after{content:"–"}
+.help .body{padding:0 4px 16px}
+.help p{margin:0 0 10px}
+.help ul{margin:0 0 10px;padding-left:22px}
+.help li{margin-bottom:6px}
+.help b{font-weight:700}
+.help .intro{font-size:20px;color:var(--muted);margin:4px 0 12px}
 /* HUD réduit : seulement vitesse, altitude, reste */
 body.compact .sub{display:none}
 @media (prefers-reduced-motion: reduce){.panel{transition:none}}
@@ -296,6 +311,7 @@ body.compact .sub{display:none}
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-card" role="dialog" aria-labelledby="sheet-t">
     <div class="sheet-head"><h2 id="sheet-t">Menu</h2><button id="sheet-close">Fermer</button></div>
+    <button id="help-open" style="width:100%;margin-top:4px">Mode d’emploi</button>
 
     <h3>Secours</h3>
     <div class="sos">
@@ -413,6 +429,7 @@ body.compact .sub{display:none}
       <button class="actbtn" data-v="rando"><b>Randonnée</b><small>Pente en %, temps de marche</small></button>
       <button class="actbtn" data-v="ski"><b>Ski de rando</b><small>Pente en degrés, pentes du terrain</small></button>
     </div>
+    <button class="link" id="help-open2" style="margin-top:14px;width:100%;border:none;text-decoration:underline;color:var(--muted)">Mode d’emploi</button>
   </div>
 </div>
 
@@ -434,6 +451,136 @@ body.compact .sub{display:none}
       <button id="sum-export">Exporter en GPX</button>
       <button class="primary" id="sum-close">Fermer</button>
     </div>
+  </div>
+</div>
+
+<div class="sheet" id="help" hidden>
+  <div class="sheet-card help" role="dialog" aria-labelledby="help-t">
+    <div class="sheet-head"><h2 id="help-t">Mode d’emploi</h2><button id="help-close">Fermer</button></div>
+    <p class="intro">Touche un titre pour l’ouvrir.</p>
+
+    <details><summary>1. Installer l’app</summary><div class="body">
+      <p>Ouvre l’adresse de l’app dans <b>Safari</b>, puis <b>Partager</b> et <b>Sur l’écran d’accueil</b>. L’app s’ouvre alors en plein écran, comme une vraie application.</p>
+      <p>Au premier <b>Démarrer</b>, autorise la <b>localisation</b>. Dans les Réglages de l’iPhone, Service de localisation, Sites web Safari, choisis « Lorsque l’app est active » et active <b>Position exacte</b>.</p>
+      <p>Ouvre l’app une première fois avec du réseau : elle s’enregistre pour pouvoir ensuite fonctionner sans réseau.</p>
+    </div></details>
+
+    <details><summary>2. Choisir l’activité</summary><div class="body">
+      <p>À chaque ouverture, choisis <b>VTT</b>, <b>Randonnée</b> ou <b>Ski de rando</b>. Ce choix règle les couleurs de pente, le calcul de la durée et, en ski, l’affichage des pentes du terrain.</p>
+      <p>Tu peux changer en cours de route dans <b>Menu</b>, Activité.</p>
+    </div></details>
+
+    <details><summary>3. Charger une trace ou rouler sans trace</summary><div class="body">
+      <p><b>Ouvrir un GPX</b> : choisis le fichier dans Fichiers, iCloud Drive ou une pièce jointe de mail. La trace s’affiche avec son profil.</p>
+      <p>Les traces ouvertes sont gardées dans <b>Menu, Mes traces</b>. Touche une trace pour la reprendre, la croix pour la supprimer. <b>Inverser le sens</b> fait parcourir la trace à l’envers.</p>
+      <p><b>Rouler sans trace</b> : ton parcours s’enregistre et l’écran affiche la distance parcourue, le temps en mouvement et le D+.</p>
+    </div></details>
+
+    <details><summary>4. Démarrer le suivi</summary><div class="body">
+      <p>Appuie sur <b>Démarrer</b>. L’écran reste allumé pendant le suivi : c’est indispensable, car l’iPhone coupe le GPS des apps web quand l’écran se verrouille.</p>
+      <p><b>Pause</b> arrête le GPS, <b>Reprendre</b> le relance. Ta sortie continue de s’enregistrer au même endroit.</p>
+    </div></details>
+
+    <details><summary>5. Lire l’écran</summary><div class="body">
+      <ul>
+        <li><b>Vitesse</b> en km/h, mesurée par le GPS.</li>
+        <li><b>Altitude</b> : celle du GPS, ou celle de la trace si le GPS ne la donne pas. La mention sous le chiffre indique laquelle.</li>
+        <li><b>Reste</b> : kilomètres restants jusqu’à la fin de la trace (sans trace : <b>Distance</b> parcourue).</li>
+        <li><b>Fait</b>, <b>D+ restant</b> et vitesse <b>Max</b> sur la ligne du dessous.</li>
+      </ul>
+      <p>Les chiffres sont posés en transparence sur la carte. Pour les mettre sur fond ou n’afficher que l’essentiel, va dans Menu, Affichage.</p>
+    </div></details>
+
+    <details><summary>6. Toucher l’écran</summary><div class="body">
+      <p>Touche la <b>carte</b> ou les <b>chiffres</b> : une grande bulle s’affiche 5 secondes avec :</p>
+      <ul>
+        <li>le <b>reste à monter</b> dans la montée en cours, ou la prochaine montée ;</li>
+        <li>l’<b>heure d’arrivée</b> estimée, en orange ou en rouge si tu risques d’arriver de nuit ;</li>
+        <li>l’heure du <b>coucher du soleil</b>.</li>
+      </ul>
+    </div></details>
+
+    <details><summary>7. Les boutons du bas</summary><div class="body">
+      <ul>
+        <li><b>Démarrer / Pause</b> : lance ou arrête le suivi.</li>
+        <li><b>Centrer</b> : recentre la carte sur toi après l’avoir déplacée.</li>
+        <li><b>Profil</b> : affiche ou masque le profil d’altitude.</li>
+        <li><b>Verrou</b> : bloque l’écran contre les appuis involontaires. Pour l’ouvrir, <b>maintiens</b> le bouton du bas une seconde.</li>
+        <li><b>Menu</b> : tous les réglages.</li>
+      </ul>
+      <p>La <b>flèche ⌄</b> en haut du panneau le fait disparaître pour libérer la carte. Le <b>bouton rond ⌃</b> en bas à droite le fait revenir.</p>
+    </div></details>
+
+    <details><summary>8. La carte</summary><div class="body">
+      <ul>
+        <li>La trace est <b>colorée selon la pente</b> : vert, bleu, orange puis rouge quand ça monte ou descend fort. Les seuils dépendent de l’activité : VTT 5, 8 et 12 % ; randonnée 10, 20 et 30 % ; ski 15, 22 et 30°. La légende est dans le Menu.</li>
+        <li>Les petites <b>flèches</b> blanches indiquent le sens de parcours.</li>
+        <li>Ton parcours réel se dessine en <b>bleu foncé</b>.</li>
+        <li>Si tu sors de la trace, un bandeau rouge indique la direction et la distance, et une <b>ligne rouge pointillée</b> te relie au point le plus proche.</li>
+        <li>Le <b>bouton boussole</b> (à droite) met ton sens de marche en haut de la carte. Touche-le encore pour revenir au nord en haut.</li>
+      </ul>
+    </div></details>
+
+    <details><summary>9. Les annonces vocales</summary><div class="body">
+      <p>Pendant le suivi, l’app annonce :</p>
+      <ul>
+        <li>les <b>montées</b> 500 m avant, à mi-montée et 150 m avant le sommet ;</li>
+        <li>les <b>passages à plus de 30 %</b>, 150 m avant, en montée comme en descente ;</li>
+        <li>le <b>hors trace</b>, chaque minute, puis le retour sur la trace ;</li>
+        <li>les <b>points du GPX</b> (refuge, source…) à 1 km puis sur place ;</li>
+        <li>la distance <b>tous les 5 km</b> ;</li>
+        <li>le risque d’<b>arriver après le coucher du soleil</b>.</li>
+      </ul>
+      <p>Monte le volume du téléphone. <b>Tester la voix</b> et la coupure des annonces sont dans le Menu.</p>
+    </div></details>
+
+    <details><summary>10. Cartes sans réseau</summary><div class="body">
+      <p>Avant de partir, dans <b>Menu, Télécharger pour le hors ligne</b> :</p>
+      <ul>
+        <li>choisis le <b>fond de carte</b> (Plan IGN en France, Swisstopo en Suisse, OpenTopoMap ailleurs) ;</li>
+        <li>choisis <b>Autour de la trace</b> ou <b>Zone affichée</b>, puis <b>Standard</b> ou <b>Détaillé</b> ;</li>
+        <li>appuie sur <b>Télécharger</b> et attends la fin de la barre.</li>
+      </ul>
+      <p>Sans réseau, le zoom est limité au niveau téléchargé. OpenStreetMap ne peut pas être téléchargé.</p>
+    </div></details>
+
+    <details><summary>11. Ski de randonnée</summary><div class="body">
+      <p>En ski, la carte peut afficher les <b>pentes du terrain</b> à partir de 30° : jaune, orange, rouge puis violet. Regarde aussi les pentes <b>au-dessus</b> de ta trace.</p>
+      <p>Les boutons <b>Bulletin d’avalanche</b> ouvrent Météo-France et le SLF. La carte des pentes ne remplace ni le bulletin ni ton jugement sur place.</p>
+    </div></details>
+
+    <details><summary>12. Météo</summary><div class="body">
+      <p>Dans le Menu : prévisions de 2 h en 2 h au départ et au sommet de la trace, avec la pluie, le vent et ses rafales, et l’isotherme 0 °C en ski. Les valeurs à surveiller sont en rouge. Il faut du réseau.</p>
+    </div></details>
+
+    <details><summary>13. Secours</summary><div class="body">
+      <p>En haut du Menu : tes <b>coordonnées</b> en grand, le bouton <b>Appeler le 112</b>, l’envoi de ta position par <b>SMS</b> et le <b>partage</b> de ta position.</p>
+    </div></details>
+
+    <details><summary>14. Fin de sortie et export</summary><div class="body">
+      <p><b>Menu, Ma sortie, Terminer la sortie</b> affiche le résumé : distance, D+, durées, moyenne, vitesse max et part de la trace suivie.</p>
+      <p><b>Exporter en GPX</b> permet d’enregistrer la sortie dans Fichiers, de l’envoyer ou de l’importer dans Garmin Connect. <b>Nouvelle sortie</b> efface l’enregistrement : exporte-le avant.</p>
+    </div></details>
+
+    <details><summary>15. Affichage</summary><div class="body">
+      <ul>
+        <li><b>Grands boutons</b> : pour les gants.</li>
+        <li><b>Plein soleil</b> : contraste maximal.</li>
+        <li><b>Chiffres transparents ou sur fond</b>.</li>
+        <li><b>Avec ou sans Fait, D+, Max</b> : pour n’afficher que l’essentiel.</li>
+      </ul>
+      <p>En paysage, les chiffres passent à gauche et la carte à droite, idéal sur le guidon.</p>
+    </div></details>
+
+    <details><summary>16. Conseils et limites</summary><div class="body">
+      <ul>
+        <li>L’écran allumé consomme de la batterie : prévois une <b>batterie externe</b> pour les longues sorties.</li>
+        <li>Le GPS met 10 à 30 secondes à bien se caler en extérieur, surtout pour l’altitude.</li>
+        <li>L’altitude du GPS est approximative, à quelques dizaines de mètres près.</li>
+        <li>En forêt dense ou en gorge, la vitesse et la position sont moins précises.</li>
+        <li>Un iPad uniquement Wi-Fi n’a pas de GPS : utilise l’iPhone pour rouler.</li>
+      </ul>
+    </div></details>
   </div>
 </div>
 
@@ -576,9 +723,29 @@ function buildTrack(pts, wpts, name){
   t.wptA = wpts.map(w => { const p = project(t, w.lat, w.lon, 0, n - 1); return {...w, along:p.along, d:p.d}; })
     .filter(w => w.d < 200).sort((a, b) => a.along - b.along);
   t.climbs = findClimbs(t);
+  t.steep = findSteep(t);
   return t;
 }
 
+// Passages raides : pente ≥ 30 % sur au moins 25 m, mesurée sur 40 m glissants pour attraper les courts raidillons
+const STEEP = 30;
+function findSteep(t){
+  const out = [], P = t.pts, C = t.cum, n = P.length;
+  if (!t.hasEle) return out;
+  let a = 0, b = 0, cur = null;
+  for (let i = 0; i < n; i++){
+    while (a < i && C[i] - C[a] > 20) a++;
+    while (b < n - 1 && C[b] - C[i] < 20) b++;
+    const dd = C[b] - C[a], g = dd > 10 ? (P[b].ele - P[a].ele) / dd * 100 : 0;
+    if (Math.abs(g) >= STEEP){
+      const dir = g > 0 ? 1 : -1;
+      if (cur && cur.dir === dir && C[i] - cur.e < 30){ cur.e = Math.max(cur.e, C[b]); cur.max = Math.max(cur.max, Math.abs(g)); }
+      else { if (cur) out.push(cur); cur = {s:C[i], e:C[b], max:Math.abs(g), dir}; }
+    }
+  }
+  if (cur) out.push(cur);
+  return out.filter(x => x.e - x.s >= 25);
+}
 // Montées notables : gain mini selon l'activité, petites descentes tolérées (20 m)
 function findClimbs(t){
   const out = [], P = t.pts, tol = 20, minGain = A().minGain;
@@ -946,7 +1113,7 @@ function say(text, force){
 }
 const sDist = d => d < 1000 ? `${Math.max(50, Math.round(d / 50) * 50)} mètres` : `${fr(d / 1000, 1)} kilomètres`;
 const sSlope = g => A().unit === '°' ? `${Math.round(slopeVal(g))} degrés` : `${Math.round(Math.abs(g))} pour cent`;
-function resetVoice(){ vs = {ap:new Set(), half:new Set(), top:new Set(), wpt:new Set(), km:null, offT:0, late:false}; }
+function resetVoice(){ vs = {steep:new Set(), ap:new Set(), half:new Set(), top:new Set(), wpt:new Set(), km:null, offT:0, late:false}; }
 resetVoice();
 function voiceEvents(n, off){
   const a = n.along;
@@ -963,6 +1130,17 @@ function voiceEvents(n, off){
       const rem = T.pts[c.i1].ele - eleAt(a);
       if (!vs.top.has(j) && e0 - a < 150){ vs.top.add(j); vs.half.add(j); say('Fin de montée dans 150 mètres'); }
       else if (!vs.half.has(j) && gain >= 80 && rem <= gain / 2){ vs.half.add(j); say(`Mi-montée, encore ${Math.round(rem)} mètres`); }
+    }
+  });
+  (T.steep || []).forEach((x, j) => {
+    if (vs.steep.has(j)) return;
+    if (a >= x.s && a <= x.e){ vs.steep.add(j); return; }          // déjà dedans : on ne l'annonce plus
+    const d = x.s - a;
+    if (d > 0 && d <= 150){
+      vs.steep.add(j);
+      const sens = x.dir > 0 ? 'en montée' : 'en descente';
+      say(`Attention, pente raide dans ${sDist(d)}, ${sens}, ${sSlope(x.max)} sur ${sDist(x.e - x.s)}`);
+      toast(`Pente raide dans ${km(d)} : ${slopeTxt(x.max)} ${sens}`, 5000);
     }
   });
   T.wptA.forEach(w => { const d = w.along - a; if (!vs.wpt.has(w) && d > 200 && d <= 1000){ vs.wpt.add(w); say(`${w.name || 'Point de passage'} dans ${sDist(d)}`); } });
@@ -1523,6 +1701,10 @@ window.addEventListener('offline', () => { applyOfflineZoom(); toast('Hors rése
 
 $('menu').addEventListener('click', () => { $('sheet').hidden = false; renderMenu(); });
 $('sheet-close').addEventListener('click', () => { $('sheet').hidden = true; });
+function openHelp(){ $('help').hidden = false; $('help').querySelector('.sheet-card').scrollTop = 0; }
+$('help-open').addEventListener('click', openHelp);
+$('help-open2').addEventListener('click', openHelp);
+$('help-close').addEventListener('click', () => { $('help').hidden = true; });
 $('sheet').addEventListener('click', e => { if (e.target === $('sheet')) $('sheet').hidden = true; });
 
 /* ---------- Divers ---------- */
