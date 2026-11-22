@@ -1,0 +1,51 @@
+name: Phase 1 non-regression
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phase1-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Phase 1 static regression checks
+        run: |
+          node - <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const vm = require('node:vm');
+          const html = fs.readFileSync('index.html','utf8');
+          for (const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+            if (match[1].trim()) new vm.Script(match[1]);
+          }
+          for (const required of [
+            'checkpointRide();',
+            "window.addEventListener('pagehide', () => checkpointRide(true))",
+            'd / dt > 25',
+            'altitudeAccuracy <= 15',
+            'eles.reduce',
+            'navigator.geolocation.watchPosition'
+          ]) assert(html.includes(required), 'Missing phase 1 invariant: '+required);
+          assert(!html.includes('Math.min(...eles)'),'Large GPX spread regression');
+          assert(!html.includes('Math.max(...eles)'),'Large GPX spread regression');
+          console.log('Phase 1 static checks passed');
+          NODE
+      - name: Package independent iPhone preview
+        run: |
+          mkdir -p preview
+          cp index.html sw.js preview/
+          for file in icon-180.png favicon.png manifest.json; do
+            if [ -f "$file" ]; then cp "$file" preview/; fi
+          done
+          printf '%s\n' 'TEST BUILD ONLY - NOT PRODUCTION' 'Host these files on an independent HTTPS address for iPhone GPS and service worker tests.' > preview/README.txt
+          cd preview && zip -q -r ../trace-vtt-iphone-preview.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trace-vtt-iphone-preview
+          path: trace-vtt-iphone-preview.zip
+          retention-days: 14
