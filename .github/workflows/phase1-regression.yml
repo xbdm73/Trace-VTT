@@ -1,0 +1,41 @@
+name: Phase 1 non-regression
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  phase1-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run phase 1 regression tests
+        run: node tests/phase1.test.cjs
+      - name: Check inline JavaScript syntax
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('index.html','utf8');
+          const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.trim());
+          for(const s of scripts) new (require('vm').Script)(s);
+          console.log('Inline scripts syntax OK');
+          NODE
+      - name: Package independent iPhone preview
+        run: |
+          mkdir -p preview
+          cp index.html sw.js icon-180.png favicon.png preview/
+          cat > preview/README.txt <<'EOF'
+          TEST BUILD ONLY - do not deploy to production.
+          To test geolocation on iPhone, serve these files from an HTTPS origin.
+          Opening index.html directly as a local file will not provide reliable GPS/service worker support.
+          EOF
+          cd preview && zip -q -r ../trace-vtt-iphone-preview.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trace-vtt-iphone-preview
+          path: trace-vtt-iphone-preview.zip
+          retention-days: 14
