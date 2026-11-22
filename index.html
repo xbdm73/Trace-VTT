@@ -9,13 +9,11 @@
 <meta name="apple-mobile-web-app-title" content="Traces">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="favicon.png">
-<meta name="theme-color" content="#F3F5F2">
+<meta name="theme-color" content="#14201A">
 <title>Traces</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <style>
 :root{
   --paper:#F3F5F2; --panel:rgba(243,245,242,.95); --ink:#14201A; --muted:#3B4842;
@@ -32,6 +30,7 @@
 body.sun{--paper:#fff; --panel:#fff; --ink:#000; --muted:#1E2A24; --line:rgba(0,0,0,.45); --warn:#B3261E; --soon:#8A4A00;
   --relief:#1E4D38; --relief-soft:rgba(30,77,56,.3); --track:#C2177A; color-scheme:light}
 *{box-sizing:border-box}
+html{background:#14201A}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--txt);-webkit-tap-highlight-color:transparent}
 #map{position:fixed;inset:0;z-index:1;background:var(--paper)}
 .leaflet-bottom{bottom:var(--panel-h)}
@@ -128,7 +127,29 @@ body.big .sheet button,body.big .sheet .filebtn{min-height:64px;font-size:21px}
 .card .filebtn{min-height:60px;font-size:21px}
 .card .link{margin-top:10px;width:100%;border:none;color:var(--muted);font-weight:400;text-decoration:underline;min-height:40px}
 .err{color:var(--warn);font-size:19px;margin-top:10px;min-height:1em}
-#actpick{z-index:1600;background:var(--paper)}
+#actpick{z-index:1600;background:#14201A;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:0;overflow:hidden}
+#actpick .scene{position:absolute;left:0;right:0;top:0;width:100%;height:64%;display:block}
+#actpick .brand{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 34px);text-align:center;color:#F3F5F2}
+#actpick .brand h1{font-family:var(--num);font-weight:700;font-size:72px;line-height:1;margin:0;letter-spacing:.01em;text-shadow:0 2px 12px rgba(0,0,0,.45)}
+#actpick .brand p{margin:6px 0 0;font-size:20px;font-weight:600;color:#CFE0D6;text-shadow:0 1px 6px rgba(0,0,0,.5)}
+#actpick .card{position:relative;max-width:none;border-radius:24px 24px 0 0;border:none;
+  padding:20px 20px calc(env(safe-area-inset-bottom,0px) + 18px);box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+#actpick .card > p{margin:0 0 14px;font-size:22px;font-weight:700;color:var(--ink)}
+#actpick .trail{stroke-dasharray:640;stroke-dashoffset:640;animation:draw 1.8s .2s ease-out forwards}
+#actpick .summit{opacity:0;animation:pop .4s 1.9s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{to{opacity:1}}
+@media (prefers-reduced-motion: reduce){#actpick .trail{animation:none;stroke-dashoffset:0}#actpick .summit{animation:none;opacity:1}}
+@media (orientation: landscape) and (max-height: 540px){
+  #actpick{flex-direction:row;justify-content:flex-end;align-items:center}
+  #actpick .scene{height:100%;right:auto;width:calc(100% - min(460px,56vw) + 24px)}
+  #actpick .brand{top:calc(env(safe-area-inset-top,0px) + 16px);left:calc(env(safe-area-inset-left,0px) + 24px);right:auto;text-align:left}
+  #actpick .brand h1{font-size:60px}
+  #actpick .card{width:min(460px,56vw);max-height:100vh;overflow:auto;border-radius:24px 0 0 24px;
+    padding:16px calc(env(safe-area-inset-right,0px) + 16px) 16px 16px}
+  #actpick .acts{grid-template-columns:1fr}
+  #actpick .actbtn{min-height:64px}
+}
 #help{z-index:1700}
 .acts{display:grid;gap:10px}
 .actbtn{flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:72px;padding:10px 16px;text-align:left;border-width:2px}
@@ -421,8 +442,21 @@ body.compact .sub{display:none}
 </div>
 
 <div class="welcome" id="actpick">
+  <svg class="scene" viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F1813"/><stop offset="1" stop-color="#264034"/></linearGradient>
+    </defs>
+    <rect width="400" height="300" fill="url(#sky)"/>
+    <g fill="#F3F5F2" opacity=".55"><circle cx="40" cy="40" r="1.2"/><circle cx="92" cy="22" r="1"/><circle cx="150" cy="58" r="1.1"/><circle cx="318" cy="30" r="1.3"/><circle cx="360" cy="70" r="1"/><circle cx="258" cy="16" r="1"/></g>
+    <path d="M0 230 L60 170 L105 205 L170 130 L230 190 L290 140 L350 185 L400 160 L400 300 L0 300 Z" fill="#2C4A3C"/>
+    <path d="M-10 300 L150 112 L205 178 L250 128 L410 300 Z" fill="#3F6B56"/>
+    <path d="M150 112 L132 134 L146 131 L157 140 L167 131 Z" fill="#F3F5F2"/>
+    <path d="M250 128 L236 145 L249 142 L262 147 Z" fill="#F3F5F2"/>
+    <path class="trail" d="M70 292 L118 252 L104 228 L148 206 L134 184 L176 156 L206 118" fill="none" stroke="#F0561D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <g class="summit"><circle cx="206" cy="118" r="9" fill="#fff" stroke="#F0561D" stroke-width="4"/></g>
+  </svg>
+  <div class="brand"><h1>Traces</h1><p>VTT, randonnée, ski de rando</p></div>
   <div class="card">
-    <h1>Traces</h1>
     <p>Quelle activité aujourd’hui ?</p>
     <div class="acts">
       <button class="actbtn" data-v="vtt"><b>VTT</b><small>Pente de la trace en %, vitesse</small></button>
@@ -590,6 +624,8 @@ body.compact .sub{display:none}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script>
 (() => {
 const $ = id => document.getElementById(id);
