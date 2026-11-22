@@ -754,7 +754,7 @@ function buildTrack(pts, wpts, name){
   }
   const eles = pts.map(p => p.ele);
   const t = {pts, wpts, name, cum, cumUp, cumDown, grade, total:cum[n-1], up, down, hasEle,
-    minE:Math.min(...eles), maxE:Math.max(...eles)};
+    minE:eles.reduce((m, e) => Math.min(m, e), Infinity), maxE:eles.reduce((m, e) => Math.max(m, e), -Infinity)};
   // Position des points GPX le long de la trace
   t.wptA = wpts.map(w => { const p = project(t, w.lat, w.lon, 0, n - 1); return {...w, along:p.along, d:p.d}; })
     .filter(w => w.d < 200).sort((a, b) => a.along - b.along);
@@ -1271,24 +1271,56 @@ function showFree(){
 const newRide = () => ({start:Date.now(), pts:[], dist:0, up:0, moving:0, ref:null});
 let ride; try { ride = JSON.parse(store.get('tvtt-ride', 'null')) || newRide(); } catch(e){ ride = newRide(); }
 const saveRide = () => store.set('tvtt-ride', JSON.stringify(ride));
+let lastRideSave = Date.now();
+function checkpointRide(force = false){
+  const now = Date.now();
+  if (force || ride.pts.length % 3 === 0 || now - lastRideSave >= 10000){
+    saveRide(); lastRideSave = now;
+  }
+}
+// GPS drift guard: require sustained displacement beyond positional uncertainty.
+let motionCandidate = null;
+let filteredAltitude = null;
+function stableAltitude(c){
+  if (!Number.isFinite(c.altitude) || !Number.isFinite(c.altitudeAccuracy) || c.altitudeAccuracy > 20) return filteredAltitude;
+  if (filteredAltitude == null){ filteredAltitude = c.altitude; return filteredAltitude; }
+  const delta = c.altitude - filteredAltitude;
+  // Sudden altitude changes are held until subsequent reliable fixes converge.
+  if (Math.abs(delta) > 12) return filteredAltitude;
+  filteredAltitude += Math.max(-3, Math.min(3, delta * .2));
+  return filteredAltitude;
+}
 const rideLine = L.polyline(ride.pts.map(p => [p.lat, p.lon]), {color:'#0B3D91', weight:3, opacity:.75, interactive:false}).addTo(map);
 function rideAdd(c, t){
   if (c.accuracy > 35) return;
   const p = {lat:+c.latitude.toFixed(6), lon:+c.longitude.toFixed(6), ele:(c.altitude != null && !isNaN(c.altitude)) ? Math.round(c.altitude * 10) / 10 : null, t};
   const lp = ride.pts[ride.pts.length - 1];
   if (lp){
+    const displacement = hav(lp, p);
+    const uncertainty = Math.max(8, Math.min(35, c.accuracy) * 1.5);
+    const sensorMoving = Number.isFinite(c.speed) && c.speed >= 0.8;
+    if (!sensorMoving && displacement < uncertainty){ motionCandidate = null; return; }
+    if (!sensorMoving){
+      if (!motionCandidate || hav(motionCandidate, p) > uncertainty * 2){ motionCandidate = p; return; }
+      if (t - motionCandidate.t < 4000) return;
+    }
+    motionCandidate = null;
     const d = hav(lp, p), dt = (t - lp.t) / 1000;
+    // Reject stale, non-monotonic and physically implausible fixes before accumulating distance.
+    if (dt <= 0 || (dt < 90 && d / dt > 25)) return;
     const moving = spdS > 0.8;                          // à l'arrêt, le GPS « tremble » de quelques mètres
     if (moving ? d < 2 : (d < Math.max(5, c.accuracy) && dt < 30)) return;
     ride.dist += d;
     if (dt < 90 && dt > 0 && d / dt > A().moveSpd){ ride.moving += dt; if (sess) sess.moving += dt; }
   }
-  if (p.ele != null){
+  // Poor vertical accuracy must not inflate accumulated ascent.
+  if (p.ele != null && Number.isFinite(c.altitudeAccuracy) && c.altitudeAccuracy <= 15 && filteredAltitude != null){
+    p.ele = Math.round(filteredAltitude * 10) / 10;
     if (ride.ref == null) ride.ref = p.ele;
     else { const dd = p.ele - ride.ref; if (dd > 5){ ride.up += dd; ride.ref = p.ele; } else if (dd < -5) ride.ref = p.ele; }
   }
   ride.pts.push(p); rideLine.addLatLng([p.lat, p.lon]);
-  if (ride.pts.length % 10 === 0) saveRide();
+  checkpointRide();
 }
 function renderRide(){
   const n = ride.pts.length;
@@ -1316,7 +1348,7 @@ async function exportRide(){
 $('rec-export').addEventListener('click', exportRide);
 $('rec-reset').addEventListener('click', () => {
   if (ride.pts.length > 1 && !confirm('Effacer la sortie enregistrée et repartir de zéro ? Pense à l’exporter avant.')) return;
-  ride = newRide(); saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0'; renderRide(); if (!T) showFree();
+  ride = newRide(); motionCandidate = null; filteredAltitude = null; saveRide(); rideLine.setLatLngs([]); vmax = 0; $('vmax').textContent = '0'; renderRide(); if (!T) showFree();
 });
 
 /* ---------- GPS ---------- */
@@ -1349,9 +1381,10 @@ function stop(){
 $('go').addEventListener('click', () => watchId == null ? start() : stop());
 
 async function requestWake(){ try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
+window.addEventListener('pagehide', () => checkpointRide(true));
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && watchId != null) requestWake();
-  if (document.visibilityState === 'hidden') saveRide();
+  if (document.visibilityState === 'hidden') checkpointRide(true);
 });
 
 function onPosErr(e){
@@ -1415,10 +1448,11 @@ function onPos(p){
   updateNav(T ? lastAlong : null);
   if (!T) showFree();
 
-  if (c.altitude != null && !isNaN(c.altitude)){
-    $('alt').textContent = String(Math.round(c.altitude));
-    $('alt-lbl').textContent = 'Altitude GPS';
-    $('alt-tag').textContent = (c.altitudeAccuracy ? `± ${Math.round(c.altitudeAccuracy)} m` : 'GPS') + (traceEle != null && T.hasEle ? `, trace ${fr(Math.round(traceEle))} m` : '');
+  const displayAltitude = stableAltitude(c);
+  if (displayAltitude != null){
+    $('alt').textContent = String(Math.round(displayAltitude));
+    $('alt-lbl').textContent = 'Altitude GPS filtrée';
+    $('alt-tag').textContent = (Number.isFinite(c.altitudeAccuracy) ? `± ${Math.round(c.altitudeAccuracy)} m (mesure brute)` : 'GPS') + (traceEle != null && T.hasEle ? `, trace ${fr(Math.round(traceEle))} m` : '');
   } else if (traceEle != null && T.hasEle){
     $('alt').textContent = String(Math.round(traceEle));
     $('alt-lbl').textContent = 'Altitude trace';
@@ -1702,10 +1736,14 @@ async function download(){
   await Promise.all(Array.from({length:6}, worker));
   show();
   const zMax = dlDetail === 'max' ? d.dlMax : d.dlStd, k = 'tvtt-dlz-' + layerIdx;
-  store.set(k, Math.max(zMax, +store.get(k, 0)));
+  // Only advertise a zoom level after verifying that every requested tile is cached.
+  let missing = 0;
+  for (const job of list) if (!(await cache.match(job.url))) missing++;
+  if (!full && !dlAbort && missing === 0) store.set(k, Math.max(zMax, +store.get(k, 0)));
   $('dl-status').textContent = full ? 'Stockage plein : supprime des cartes ou réduis la zone.'
-    : dlAbort ? `Téléchargement annulé après ${fr(done)} tuiles.`
-    : `Carte enregistrée` + (fail ? `, ${fr(fail)} tuiles en échec (relance pour compléter)` : '') + '.';
+    : dlAbort ? `Téléchargement annulé après ${fr(done)} tuiles ; ${fr(missing)} manquantes.`
+    : missing ? `Carte incomplète : ${fr(missing)} tuiles manquantes sur ${fr(list.length)}. Relance le téléchargement.`
+    : 'Carte vérifiée : toutes les tuiles demandées sont enregistrées.';
   dlRunning = false;
   $('dl-go').textContent = 'Télécharger'; $('dl-go').classList.remove('running');
   setTimeout(() => $('dl-bar').classList.remove('on'), 1200);
